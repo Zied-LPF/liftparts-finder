@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { Supplier } from "./suppliers";
+import { Supplier } from "../../lib/suppliers";
 
 let supabase: SupabaseClient | null = null;
 
