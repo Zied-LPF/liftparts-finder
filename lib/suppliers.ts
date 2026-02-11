@@ -1,33 +1,39 @@
 export type Supplier = {
-  name: string
-  baseUrl: string
-  priority: number
-  active: boolean
-}
+  name: string;
+  baseUrl: string;
+  priority: number;
+  active: boolean;
+};
 
 export const SUPPLIERS: Supplier[] = [
   {
-    name: 'MySodimas',
-    baseUrl: 'https://www.mysodimas.com',
+    name: "MySodimas",
+    baseUrl: "https://www.mysodimas.com",
     priority: 100,
-    active: true
+    active: true,
   },
   {
-    name: 'ElvaCenter',
-    baseUrl: 'https://www.elvacenter.com',
+    name: "ElvaCenter",
+    baseUrl: "https://www.elvacenter.com",
     priority: 50,
-    active: true
+    active: true,
   },
   {
-    name: 'ElevatorShop',
-    baseUrl: 'https://www.elevatorshop.com',
+    name: "ElevatorShop",
+    baseUrl: "https://www.elevatorshop.com",
     priority: 30,
-    active: true
+    active: true,
   },
   {
-    name: 'LiftMaterial',
-    baseUrl: 'https://www.liftmaterial.com',
+    name: "LiftMaterial",
+    baseUrl: "https://www.liftmaterial.com",
     priority: 20,
-    active: false // prêt mais désactivé
-  }
-]
+    active: false,
+  },
+];
+
+export function getRankedSuppliers(): Supplier[] {
+  return [...SUPPLIERS]
+    .filter((s) => s.active)
+    .sort((a, b) => b.priority - a.priority);
+}
