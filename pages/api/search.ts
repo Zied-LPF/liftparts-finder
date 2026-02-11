@@ -10,29 +10,39 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { q } = req.query
+  const query = (req.query.q as string)?.trim()
 
-  if (!q || typeof q !== 'string') {
-    return res.status(200).json({ parts: [] })
+  if (!query) {
+    return res.status(200).json([])
   }
 
-  // 🔍 Recherche SUR PLUSIEURS CHAMPS
+  // 🔍 Recherche texte sur name OU reference
   const { data, error } = await supabase
     .from('parts')
     .select('*')
     .or(
-      `reference.ilike.%${q}%,name.ilike.%${q}%`
+      `name.ilike.%${query}%,reference.ilike.%${query}%`
     )
 
   if (error) {
-    console.error('Supabase error:', error)
-    return res.status(500).json({ error: 'Database error' })
+    console.error('Supabase search error:', error)
+    return res.status(500).json({ error: error.message })
   }
 
-  const partsWithSuppliers = (data || []).map((part) => ({
-    ...part,
-    suppliers: SUPPLIERS.filter(s => s.active)
-  }))
+  // 🧠 Enrichissement fournisseurs
+  const results = (data || []).map((part) => {
+    const supplier = SUPPLIERS.find(
+      (s) =>
+        s.name.toLowerCase() ===
+        (part.brand || '').toLowerCase()
+    )
 
-  return res.status(200).json({ parts: partsWithSuppliers })
+    return {
+      ...part,
+      supplier,
+      supplierPriority: supplier?.priority ?? 0,
+    }
+  })
+
+  return res.status(200).json(results)
 }
