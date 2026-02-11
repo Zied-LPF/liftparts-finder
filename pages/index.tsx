@@ -17,31 +17,57 @@ export default function Home() {
     setLoading(true)
     const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
     const data = await res.json()
-    setResults(data)
+
+    // sécurité + tri par score décroissant
+    const sorted = Array.isArray(data)
+      ? data.sort((a, b) => b.score - a.score)
+      : []
+
+    setResults(sorted)
     setLoading(false)
   }
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      runSearch()
-    }
+    if (e.key === 'Enter') runSearch()
   }
 
   return (
-    <main style={{ padding: 20, fontFamily: 'Arial, sans-serif' }}>
-      <h1>LiftParts Finder</h1>
+    <main
+      style={{
+        padding: 24,
+        fontFamily: 'Arial, sans-serif',
+        background: '#f5f5f5',
+        minHeight: '100vh',
+      }}
+    >
+      <h1 style={{ marginBottom: 20 }}>🔧 LiftParts Finder</h1>
 
-      <div style={{ marginBottom: 20 }}>
+      {/* Barre de recherche */}
+      <div
+        style={{
+          display: 'flex',
+          gap: 10,
+          marginBottom: 24,
+        }}
+      >
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder="Référence ou mot-clé"
-          style={{ padding: 6, width: 240 }}
+          style={{
+            padding: 10,
+            width: 260,
+            fontSize: 14,
+          }}
         />
         <button
           onClick={runSearch}
-          style={{ marginLeft: 10, padding: '6px 12px' }}
+          style={{
+            padding: '10px 16px',
+            fontSize: 14,
+            cursor: 'pointer',
+          }}
         >
           Rechercher
         </button>
@@ -50,52 +76,44 @@ export default function Home() {
       {loading && <p>Recherche en cours…</p>}
 
       {!loading && results.length > 0 && (
-        <table
-          style={{
-            borderCollapse: 'collapse',
-            width: '100%',
-            maxWidth: 700,
-          }}
-        >
-          <thead>
-            <tr>
-              <th
+        <div style={{ maxWidth: 720 }}>
+          {results.map((r, index) => (
+            <div
+              key={r.name}
+              style={{
+                background: '#fff',
+                border: '1px solid #ddd',
+                borderRadius: 4,
+                padding: 12,
+                marginBottom: 10,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div>
+                <strong>
+                  {index === 0 ? '⭐ ' : ''}
+                  {r.name}
+                </strong>
+              </div>
+
+              <a
+                href={r.searchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
-                  textAlign: 'left',
-                  borderBottom: '2px solid #000',
-                  padding: 6,
+                  padding: '6px 12px',
+                  border: '1px solid #000',
+                  textDecoration: 'none',
+                  fontSize: 13,
                 }}
               >
-                Fournisseur
-              </th>
-              <th
-                style={{
-                  textAlign: 'left',
-                  borderBottom: '2px solid #000',
-                  padding: 6,
-                }}
-              >
-                Action
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {results.map((r) => (
-              <tr key={r.name}>
-                <td style={{ padding: 6 }}>{r.name}</td>
-                <td style={{ padding: 6 }}>
-                  <a
-                    href={r.searchUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Voir chez le fournisseur
-                  </a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                Voir chez le fournisseur →
+              </a>
+            </div>
+          ))}
+        </div>
       )}
 
       {!loading && results.length === 0 && query && (
