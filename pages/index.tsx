@@ -1,88 +1,106 @@
 import { useState } from 'react'
 
-type SearchResult = {
-  id: string
+type Result = {
   name: string
-  reference?: string
-  brand?: string
-  supplier?: string
-  supplierUrl?: string
+  searchUrl: string
+  score: number
 }
 
 export default function Home() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [results, setResults] = useState<SearchResult[]>([])
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<Result[]>([])
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  const handleSearch = async () => {
-    if (!searchTerm.trim()) return
+  const runSearch = async () => {
+    if (!query.trim()) return
 
     setLoading(true)
-    setError(null)
+    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+    const data = await res.json()
+    setResults(data)
+    setLoading(false)
+  }
 
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}`)
-      const data = await res.json()
-      setResults(data || [])
-    } catch (err) {
-      setError('Erreur lors de la recherche')
-      setResults([])
-    } finally {
-      setLoading(false)
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      runSearch()
     }
   }
 
   return (
-    <main style={{ padding: 24 }}>
+    <main style={{ padding: 20, fontFamily: 'Arial, sans-serif' }}>
       <h1>LiftParts Finder</h1>
 
-      {/* Champ de recherche */}
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ marginBottom: 20 }}>
         <input
-          type="text"
-          value={searchTerm}
-          placeholder="Référence, mot-clé, marque…"
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              handleSearch()
-            }
-          }}
-          style={{ marginRight: 8, width: 260 }}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder="Référence ou mot-clé"
+          style={{ padding: 6, width: 240 }}
         />
-
-        <button onClick={handleSearch}>Rechercher</button>
+        <button
+          onClick={runSearch}
+          style={{ marginLeft: 10, padding: '6px 12px' }}
+        >
+          Rechercher
+        </button>
       </div>
 
-      {/* États */}
       {loading && <p>Recherche en cours…</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      {!loading && results.length === 0 && searchTerm && (
-        <p>Aucune pièce trouvée</p>
+
+      {!loading && results.length > 0 && (
+        <table
+          style={{
+            borderCollapse: 'collapse',
+            width: '100%',
+            maxWidth: 700,
+          }}
+        >
+          <thead>
+            <tr>
+              <th
+                style={{
+                  textAlign: 'left',
+                  borderBottom: '2px solid #000',
+                  padding: 6,
+                }}
+              >
+                Fournisseur
+              </th>
+              <th
+                style={{
+                  textAlign: 'left',
+                  borderBottom: '2px solid #000',
+                  padding: 6,
+                }}
+              >
+                Action
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {results.map((r) => (
+              <tr key={r.name}>
+                <td style={{ padding: 6 }}>{r.name}</td>
+                <td style={{ padding: 6 }}>
+                  <a
+                    href={r.searchUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Voir chez le fournisseur
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
-      {/* Résultats */}
-      <ul>
-        {results.map((item) => (
-          <li key={item.id} style={{ marginBottom: 12 }}>
-            <strong>{item.name}</strong>
-            {item.reference && <div>Référence : {item.reference}</div>}
-            {item.brand && <div>Marque : {item.brand}</div>}
-            {item.supplier && <div>Fournisseur : {item.supplier}</div>}
-
-            {item.supplierUrl && (
-              <a
-                href={item.supplierUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Voir chez le fournisseur
-              </a>
-            )}
-          </li>
-        ))}
-      </ul>
+      {!loading && results.length === 0 && query && (
+        <p>Aucun fournisseur trouvé</p>
+      )}
     </main>
   )
 }
