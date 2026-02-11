@@ -2,8 +2,8 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_ANON_KEY!
 );
 
 export default async function handler(
@@ -22,7 +22,7 @@ export default async function handler(
 
   const { data, error } = await supabase
     .from("parts")
-    .select("*")
+    .select("id, name, reference, brand, favorite_supplier_id")
     .ilike("reference", `%${query}%`);
 
   if (error) {
