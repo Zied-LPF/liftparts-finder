@@ -1,10 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { suppliers } from '../../lib/suppliers'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '@/lib/supabase'
+
+type SupplierResult = {
+  name: string
+  searchUrl: string
+  score: number
+}
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse<SupplierResult[]>
 ) {
   const q = (req.query.q as string)?.trim()
 
@@ -12,36 +17,21 @@ export default async function handler(
     return res.status(200).json([])
   }
 
-  // 🔹 Recherche des pièces
-  const { data: parts, error } = await supabase
-    .from('parts')
-    .select('*')
-    .or(`reference.ilike.%${q}%,name.ilike.%${q}%`)
+  const { data: suppliers, error } = await supabase
+    .from('suppliers')
+    .select('name, base_url, priority')
+    .eq('active', true)
 
-  if (error) {
+  if (error || !suppliers) {
     console.error(error)
     return res.status(500).json([])
   }
 
-  if (!parts || parts.length === 0) {
-    return res.status(200).json([])
-  }
+  const results: SupplierResult[] = suppliers.map((s) => ({
+    name: s.name,
+    searchUrl: `${s.base_url}${encodeURIComponent(q)}`,
+    score: s.priority ?? 0,
+  }))
 
-  // 🔹 Générer un résultat par fournisseur actif
-  const results = parts.flatMap((part) =>
-    suppliers
-      .filter((s) => s.active)
-      .map((supplier) => ({
-        id: `${part.id}_${supplier.name}`,
-        name: part.name,
-        reference: part.reference,
-        brand: part.brand,
-        supplier: {
-          name: supplier.name,
-          baseUrl: supplier.baseUrl,
-        },
-      }))
-  )
-
-  return res.status(200).json(results)
+  res.status(200).json(results)
 }
