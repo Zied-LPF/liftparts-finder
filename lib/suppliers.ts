@@ -1,27 +1,27 @@
 export type Supplier = {
   name: string
-  baseUrl: string
-  searchParam: string
-  active: boolean
+  baseUrl?: string
+  priority: number
+  active?: boolean
+  favorite?: boolean
 }
 
 export const SUPPLIERS: Supplier[] = [
   {
-    name: "MySodimas",
-    baseUrl: "https://www.mysodimas.com/search",
-    searchParam: "search",
+    name: 'MySodimas',
+    baseUrl: 'https://mysodimas.sodimas.com',
+    priority: 100,
+    active: true,
+    favorite: true,
+  },
+  {
+    name: 'Sodimas',
+    priority: 80,
     active: true,
   },
   {
-    name: "ElevatorShop",
-    baseUrl: "https://www.elevatorshop.de/fr/",
-    searchParam: "search",
-    active: true,
-  },
-  {
-    name: "ElvaCenter",
-    baseUrl: "https://www.elvacenter.com/search",
-    searchParam: "query",
+    name: 'Otis',
+    priority: 70,
     active: true,
   },
 ]

@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { SUPPLIERS } from '../../lib/suppliers'
+import { SUPPLIERS, Supplier } from '../../lib/suppliers'
 import { supabase } from '../../lib/supabase'
 
 export default async function handler(
@@ -16,22 +16,18 @@ export default async function handler(
     return res.status(200).json([])
   }
 
-  // 🔍 Recherche texte sur name OU reference
   const { data, error } = await supabase
     .from('parts')
     .select('*')
-    .or(
-      `name.ilike.%${query}%,reference.ilike.%${query}%`
-    )
+    .or(`name.ilike.%${query}%,reference.ilike.%${query}%`)
 
   if (error) {
-    console.error('Supabase search error:', error)
+    console.error(error)
     return res.status(500).json({ error: error.message })
   }
 
-  // 🧠 Enrichissement fournisseurs
   const results = (data || []).map((part) => {
-    const supplier = SUPPLIERS.find(
+    const supplier: Supplier | undefined = SUPPLIERS.find(
       (s) =>
         s.name.toLowerCase() ===
         (part.brand || '').toLowerCase()
@@ -40,7 +36,7 @@ export default async function handler(
     return {
       ...part,
       supplier,
-      supplierPriority: supplier?.priority ?? 0,
+      supplierPriority: supplier ? supplier.priority : 0,
     }
   })
 
