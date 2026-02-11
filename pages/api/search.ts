@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { suppliers } from '../../lib/suppliers'
+import { SUPPLIERS } from '../../lib/suppliers'
 import { supabase } from '../../lib/supabaseClient'
 
 export default async function handler(
@@ -50,11 +50,12 @@ export default async function handler(
      3️⃣ Résultats + scoring
      ========================= */
   const results = parts.map(part => {
-    const scoredSuppliers = suppliers
+    const scoredSuppliers = SUPPLIERS
       .filter(s => s.active)
       .map(supplier => {
         let score = supplier.priority ?? 0
 
+        // ⭐ boost fournisseur favori
         if (supplier.name === favoriteSupplier) {
           score += 1000
         }
@@ -74,8 +75,5 @@ export default async function handler(
     }
   })
 
-  /* =========================
-     4️⃣ Réponse API
-     ========================= */
   return res.status(200).json(results)
 }
