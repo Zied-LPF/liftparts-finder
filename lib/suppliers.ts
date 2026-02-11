@@ -20,7 +20,7 @@ export const SUPPLIERS: Supplier[] = [
   },
   {
     name: "ElevatorShop",
-    baseUrl: "https://www.elevatorshop.com",
+    baseUrl: "https://www.elevatorshop.de/fr/",
     priority: 30,
     active: true,
   },
