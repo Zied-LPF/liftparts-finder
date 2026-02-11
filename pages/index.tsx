@@ -1,31 +1,31 @@
-import { useState } from "react"
-import { SUPPLIERS } from "../lib/suppliers"
+import { useState } from 'react'
+import Head from 'next/head'
+import { SUPPLIERS, Supplier } from '../lib/suppliers'
 
 type Part = {
   id: string
   name: string
   reference: string
-  brand: string
+  brand?: string
+  supplier?: Supplier | null
+  supplierPriority?: number
 }
 
 export default function Home() {
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState('')
   const [results, setResults] = useState<Part[]>([])
   const [loading, setLoading] = useState(false)
 
-  const search = async () => {
+  const handleSearch = async () => {
     if (!query.trim()) return
 
     setLoading(true)
-
     try {
-      const res = await fetch(
-        `/api/search?q=${encodeURIComponent(query.trim())}`
-      )
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
       const data = await res.json()
-      setResults(Array.isArray(data) ? data : [])
-    } catch (e) {
-      console.error(e)
+      setResults(data || [])
+    } catch (err) {
+      console.error('Search error', err)
       setResults([])
     } finally {
       setLoading(false)
@@ -33,53 +33,88 @@ export default function Home() {
   }
 
   return (
-    <main style={{ padding: 40 }}>
-      <h1>LiftParts Finder</h1>
+    <>
+      <Head>
+        <title>LiftParts Finder</title>
+      </Head>
 
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Référence ou mot-clé"
-      />
+      <main style={{ padding: 24 }}>
+        <h1>LiftParts Finder</h1>
 
-      <button onClick={search}>Rechercher</button>
+        {/* 🔍 Recherche */}
+        <div style={{ marginBottom: 16 }}>
+          <input
+            type="text"
+            placeholder="Référence ou mot-clé"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            style={{ marginRight: 8 }}
+          />
+          <button onClick={handleSearch} disabled={loading}>
+            {loading ? 'Recherche…' : 'Rechercher'}
+          </button>
+        </div>
 
-      {loading && <p>Recherche…</p>}
+        {/* 📋 Résultats */}
+        {results.length === 0 && !loading && (
+          <p>Aucune pièce trouvée</p>
+        )}
 
-      {!loading && results.length === 0 && query && (
-        <p>Aucune pièce trouvée</p>
-      )}
+        <ul>
+          {results.map((part) => {
+            const supplier = part.supplier
 
-      <ul>
-        {results.map((part) => (
-          <li key={part.id} style={{ marginBottom: 20 }}>
-            <strong>{part.name}</strong>
-            <br />
-            Référence : {part.reference}
-            <br />
-            Marque : {part.brand}
-
-            <ul>
-              {SUPPLIERS.filter((s) => s.active).map((supplier) => {
-                const url =
-                  supplier.baseUrl +
-                  "?" +
+            const supplierLink =
+              supplier?.baseUrl && supplier?.searchParam
+                ? supplier.baseUrl +
+                  '?' +
                   supplier.searchParam +
-                  "=" +
+                  '=' +
                   encodeURIComponent(part.reference)
+                : null
 
-                return (
-                  <li key={supplier.name}>
-                    <a href={url} target="_blank" rel="noopener noreferrer">
-                      🔗 {supplier.name}
+            return (
+              <li
+                key={part.id}
+                style={{
+                  marginBottom: 12,
+                  padding: 12,
+                  border: '1px solid #ccc',
+                }}
+              >
+                <strong>{part.name}</strong>
+                <div>Référence : {part.reference}</div>
+                {part.brand && <div>Marque : {part.brand}</div>}
+
+                {/* 🏷️ Fournisseur */}
+                {supplier && (
+                  <div style={{ marginTop: 6 }}>
+                    Fournisseur :{' '}
+                    <strong>
+                      {supplier.name}
+                      {supplier.favorite && ' ⭐'}
+                    </strong>
+                  </div>
+                )}
+
+                {/* 🔗 Lien fournisseur */}
+                {supplierLink && (
+                  <div>
+                    <a
+                      href={supplierLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Voir chez le fournisseur
                     </a>
-                  </li>
-                )
-              })}
-            </ul>
-          </li>
-        ))}
-      </ul>
-    </main>
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      </main>
+    </>
   )
 }
