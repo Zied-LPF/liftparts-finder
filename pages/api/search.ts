@@ -1,37 +1,34 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { SUPPLIERS, Supplier } from "../../lib/suppliers";
+import type { NextApiRequest, NextApiResponse } from "next";
+import { createClient } from "@supabase/supabase-js";
 
-let supabase: SupabaseClient | null = null;
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_ANON_KEY!
+);
 
-function getSupabase() {
-  if (!supabase) {
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_ANON_KEY;
-
-    if (!url || !key) {
-      console.warn("Supabase env vars missing");
-      return null;
-    }
-
-    supabase = createClient(url, key);
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== "GET") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
-  return supabase;
-}
+  const query = req.query.q as string;
 
-export async function searchParts(query: string, suppliers: Supplier[]) {
-  const client = getSupabase();
-  if (!client) return [];
+  if (!query) {
+    return res.status(400).json({ error: "Missing query parameter" });
+  }
 
-  const { data, error } = await client
+  const { data, error } = await supabase
     .from("parts")
     .select("*")
     .ilike("reference", `%${query}%`);
 
   if (error) {
-    console.error(error);
-    return [];
+    console.error("Supabase error:", error);
+    return res.status(500).json({ error: "Database error" });
   }
 
-  return data ?? [];
+  return res.status(200).json(data ?? []);
 }
