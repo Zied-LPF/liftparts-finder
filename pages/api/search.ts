@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
-import { getRankedSuppliers } from "../../lib/suppliers";
+import { getRankedSuppliers, buildSupplierSearchUrl } from "../../lib/suppliers";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,18 +15,16 @@ export default async function handler(
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const query = req.query.q;
+  const query = req.query.q as string;
 
-  if (!query || typeof query !== "string") {
+  if (!query) {
     return res.status(400).json({ error: "Missing query parameter" });
   }
 
   const { data, error } = await supabase
     .from("parts")
     .select("*")
-    .or(
-      `reference.ilike.%${query}%,name.ilike.%${query}%,brand.ilike.%${query}%`
-    );
+    .ilike("reference", `%${query}%`);
 
   if (error) {
     console.error("Supabase error:", error);
@@ -37,7 +35,10 @@ export default async function handler(
 
   const enrichedData = (data ?? []).map((part) => ({
     ...part,
-    suppliers,
+    supplierLinks: suppliers.map((supplier) => ({
+      name: supplier.name,
+      url: buildSupplierSearchUrl(supplier, part.reference),
+    })),
   }));
 
   return res.status(200).json(enrichedData);

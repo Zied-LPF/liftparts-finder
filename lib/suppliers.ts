@@ -24,16 +24,20 @@ export const SUPPLIERS: Supplier[] = [
     priority: 30,
     active: true,
   },
-  {
-    name: "LiftMaterial",
-    baseUrl: "https://www.liftmaterial.com",
-    priority: 20,
-    active: false,
-  },
 ];
 
 export function getRankedSuppliers(): Supplier[] {
   return [...SUPPLIERS]
     .filter((s) => s.active)
     .sort((a, b) => b.priority - a.priority);
+}
+
+/**
+ * Génère une URL fournisseur avec recherche pré-remplie
+ */
+export function buildSupplierSearchUrl(
+  supplier: Supplier,
+  reference: string
+): string {
+  return `${supplier.baseUrl}?search=${encodeURIComponent(reference)}`;
 }
