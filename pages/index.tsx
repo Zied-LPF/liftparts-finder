@@ -49,35 +49,23 @@ export default function Home() {
             <div style={{ marginTop: 10 }}>
               {suppliers.map((supplier) => (
                 <div key={supplier.id}>
-                  {supplier.autoSearch ? (
-                    <a
-                      href={`${supplier.searchUrl}${part.reference}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      🔗 {supplier.name}
-                    </a>
-                  ) : (
-                    <>
-                      <a
-                        href={supplier.baseUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        🔗 {supplier.name}
-                      </a>
-                      <div
-                        style={{
-                          fontSize: "0.85em",
-                          color: "#666",
-                          marginLeft: 10,
-                        }}
-                      >
-                        ℹ️ Copiez la référence{" "}
-                        <strong>{part.reference}</strong> dans leur recherche
-                      </div>
-                    </>
-                  )}
+                  <a
+                    href={supplier.baseUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    🔗 {supplier.name}
+                  </a>
+                  <div
+                    style={{
+                      fontSize: "0.85em",
+                      color: "#666",
+                      marginLeft: 10,
+                    }}
+                  >
+                    ℹ️ Copiez la référence{" "}
+                    <strong>{part.reference}</strong> dans leur champ de recherche
+                  </div>
                 </div>
               ))}
             </div>

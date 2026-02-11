@@ -2,7 +2,6 @@ export type Supplier = {
   id: string;
   name: string;
   baseUrl: string;
-  searchUrl?: string;
   autoSearch: boolean;
 };
 
@@ -17,7 +16,6 @@ export const suppliers: Supplier[] = [
     id: "elevatorshop",
     name: "ElevatorShop",
     baseUrl: "https://www.elevatorshop.de/fr/",
-    searchUrl: "https://www.elevatorshop.de/fr/?search=",
-    autoSearch: true,
+    autoSearch: false,
   },
 ];
