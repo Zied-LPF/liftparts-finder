@@ -1,54 +1,47 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { suppliers } from '../../lib/suppliers'
 import { supabase } from '../../lib/supabase'
-import { SUPPLIERS } from '../../lib/suppliers'
-import { computeScore } from '../../lib/scoring'
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const q = String(req.query.q || '').trim()
-  const favoriteSupplier = String(req.query.favoriteSupplier || '').trim()
+  const q = (req.query.q as string)?.trim()
 
   if (!q) {
     return res.status(200).json([])
   }
 
-  const { data, error } = await supabase
+  // 🔹 Recherche des pièces
+  const { data: parts, error } = await supabase
     .from('parts')
     .select('*')
+    .or(`reference.ilike.%${q}%,name.ilike.%${q}%`)
 
   if (error) {
     console.error(error)
-    return res.status(500).json({ error: 'Database error' })
+    return res.status(500).json([])
   }
 
-  const results = data
-    .map((part) => {
-      const supplier =
-        SUPPLIERS.find(
-          (s) =>
-            s.name.toLowerCase() ===
-            String(part.supplier || '').toLowerCase()
-        ) || null
+  if (!parts || parts.length === 0) {
+    return res.status(200).json([])
+  }
 
-      const score = computeScore(
-        {
-          ...part,
-          supplier,
+  // 🔹 Générer un résultat par fournisseur actif
+  const results = parts.flatMap((part) =>
+    suppliers
+      .filter((s) => s.active)
+      .map((supplier) => ({
+        id: `${part.id}_${supplier.name}`,
+        name: part.name,
+        reference: part.reference,
+        brand: part.brand,
+        supplier: {
+          name: supplier.name,
+          baseUrl: supplier.baseUrl,
         },
-        q,
-        favoriteSupplier
-      )
+      }))
+  )
 
-      return {
-        ...part,
-        supplier,
-        score,
-      }
-    })
-    .filter((p) => p.score > 0)
-    .sort((a, b) => b.score - a.score)
-
-  res.status(200).json(results)
+  return res.status(200).json(results)
 }
