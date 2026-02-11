@@ -3,11 +3,11 @@ import Head from 'next/head'
 import { Supplier } from '../lib/suppliers'
 
 type Part = {
-  id: string
+  id?: string
   name: string
   reference: string
   brand?: string
-  supplier?: Supplier | null
+  supplier?: Supplier
 }
 
 export default function Home() {
@@ -19,12 +19,13 @@ export default function Home() {
     if (!query.trim()) return
 
     setLoading(true)
+
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
       const data = await res.json()
       setResults(data || [])
-    } catch (e) {
-      console.error(e)
+    } catch (err) {
+      console.error('Search error', err)
       setResults([])
     } finally {
       setLoading(false)
@@ -37,54 +38,68 @@ export default function Home() {
         <title>LiftParts Finder</title>
       </Head>
 
-      <main style={{ padding: 24 }}>
+      <main style={{ padding: 20, fontFamily: 'serif' }}>
         <h1>LiftParts Finder</h1>
 
-        <div style={{ marginBottom: 16 }}>
+        {/* Recherche */}
+        <div style={{ marginBottom: 20 }}>
           <input
+            type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             placeholder="Référence ou mot-clé"
+            style={{ marginRight: 8 }}
           />
-          <button onClick={handleSearch} disabled={loading}>
-            Rechercher
-          </button>
+          <button onClick={handleSearch}>Rechercher</button>
         </div>
 
-        {!loading && results.length === 0 && <p>Aucune pièce trouvée</p>}
+        {/* Chargement */}
+        {loading && <p>Recherche en cours…</p>}
+
+        {/* Résultats */}
+        {!loading && results.length === 0 && query && (
+          <p>Aucune pièce trouvée</p>
+        )}
 
         <ul>
-          {results.map((part) => {
-            const supplier = part.supplier
-
-            const supplierLink = supplier
-              ? `${supplier.baseUrl}?q=${encodeURIComponent(part.reference)}`
-              : null
+          {results.map((part, index) => {
+            const supplierLink =
+              part.supplier && part.reference
+                ? part.supplier.searchUrl +
+                  encodeURIComponent(part.reference)
+                : null
 
             return (
-              <li
-                key={part.id}
-                style={{ border: '1px solid #ccc', padding: 12, marginBottom: 12 }}
-              >
-                <strong>{part.name}</strong>
-                <div>Référence : {part.reference}</div>
-                {part.brand && <div>Marque : {part.brand}</div>}
+              <li key={index} style={{ marginBottom: 16 }}>
+                <div
+                  style={{
+                    border: '1px solid #ccc',
+                    padding: 12,
+                    maxWidth: 500,
+                  }}
+                >
+                  <strong>{part.name}</strong>
+                  <br />
+                  Référence : {part.reference}
+                  <br />
+                  {part.brand && <>Marque : {part.brand}<br /></>}
+                  {part.supplier && (
+                    <>
+                      Fournisseur : {part.supplier.name}
+                      <br />
+                    </>
+                  )}
 
-                {supplier && (
-                  <div>
-                    Fournisseur : <strong>{supplier.name}</strong>
-                    {supplier.favorite && ' ⭐'}
-                  </div>
-                )}
-
-                {supplierLink && (
-                  <div>
-                    <a href={supplierLink} target="_blank" rel="noreferrer">
+                  {supplierLink && (
+                    <a
+                      href={supplierLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       Voir chez le fournisseur
                     </a>
-                  </div>
-                )}
+                  )}
+                </div>
               </li>
             )
           })}
