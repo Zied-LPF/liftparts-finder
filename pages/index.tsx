@@ -1,53 +1,57 @@
-import { useState } from "react";
+import { useState } from "react"
 
 type Part = {
-  id: string;
-  name: string;
-  reference: string;
-  brand: string;
-};
+  id: string
+  name: string
+  reference: string
+  brand: string
+}
 
 export default function Home() {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Part[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState("")
+  const [results, setResults] = useState<Part[]>([])
+  const [loading, setLoading] = useState(false)
 
   const search = async () => {
-    if (!query.trim()) return;
+    if (!query.trim()) {
+      setResults([])
+      return
+    }
 
-    setLoading(true);
+    setLoading(true)
 
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-      const data = await res.json();
+      const res = await fetch(
+        `/api/search?q=${encodeURIComponent(query.trim())}`
+      )
 
-      console.log("API result:", data); // 👈 DEBUG CRUCIAL
+      const data = await res.json()
+      console.log("API result:", data)
 
-      setResults(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Search error:", err);
-      setResults([]);
+      setResults(Array.isArray(data) ? data : [])
+    } catch (e) {
+      console.error("Search error", e)
+      setResults([])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <main style={{ padding: 40 }}>
       <h1>LiftParts Finder</h1>
 
-      <div style={{ marginBottom: 20 }}>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Référence ou mot-clé"
-          style={{ marginRight: 10 }}
-        />
-        <button onClick={search}>Rechercher</button>
-      </div>
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Référence ou mot-clé"
+      />
 
-      {loading && <p>Recherche en cours…</p>}
+      <button onClick={search} disabled={loading}>
+        Rechercher
+      </button>
+
+      {loading && <p>Recherche…</p>}
 
       {!loading && results.length === 0 && query && (
         <p>Aucune pièce trouvée</p>
@@ -65,5 +69,5 @@ export default function Home() {
         ))}
       </ul>
     </main>
-  );
+  )
 }
