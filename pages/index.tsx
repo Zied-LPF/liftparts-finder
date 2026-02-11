@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 type Supplier = {
   name: string
@@ -13,11 +13,26 @@ type Part = {
   supplier?: Supplier | null
 }
 
+const FAVORITE_SUPPLIER_KEY = 'lpf_favorite_supplier'
+
 export default function Home() {
   const [query, setQuery] = useState('')
   const [favoriteSupplier, setFavoriteSupplier] = useState('Sodimas')
   const [results, setResults] = useState<Part[]>([])
   const [loading, setLoading] = useState(false)
+
+  // 🔹 Charger le fournisseur favori au démarrage
+  useEffect(() => {
+    const saved = localStorage.getItem(FAVORITE_SUPPLIER_KEY)
+    if (saved) {
+      setFavoriteSupplier(saved)
+    }
+  }, [])
+
+  // 🔹 Sauvegarder le fournisseur favori à chaque changement
+  useEffect(() => {
+    localStorage.setItem(FAVORITE_SUPPLIER_KEY, favoriteSupplier)
+  }, [favoriteSupplier])
 
   const search = async () => {
     if (!query.trim()) return
@@ -28,6 +43,7 @@ export default function Home() {
         favoriteSupplier
       )}`
     )
+
     const data = await res.json()
     setResults(data)
     setLoading(false)
@@ -47,31 +63,18 @@ export default function Home() {
       </h1>
 
       {/* 🔎 BARRE DE RECHERCHE */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 10,
-          marginBottom: 30,
-        }}
-      >
+      <div style={{ display: 'flex', gap: 10, marginBottom: 30 }}>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Référence ou mot-clé (ex: LCB)"
-          style={{
-            flex: 1,
-            padding: 10,
-            fontSize: 16,
-          }}
+          style={{ flex: 1, padding: 10, fontSize: 16 }}
         />
 
         <select
           value={favoriteSupplier}
           onChange={(e) => setFavoriteSupplier(e.target.value)}
-          style={{
-            padding: 10,
-            fontSize: 14,
-          }}
+          style={{ padding: 10, fontSize: 14 }}
         >
           <option value="Sodimas">Sodimas</option>
           <option value="Otis">Otis</option>
@@ -81,11 +84,7 @@ export default function Home() {
 
         <button
           onClick={search}
-          style={{
-            padding: '10px 16px',
-            fontSize: 16,
-            cursor: 'pointer',
-          }}
+          style={{ padding: '10px 16px', fontSize: 16, cursor: 'pointer' }}
         >
           Rechercher
         </button>
