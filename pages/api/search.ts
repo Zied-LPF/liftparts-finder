@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { SUPPLIERS } from '../../lib/suppliers'
 import { supabase } from '../../lib/supabase'
+import { SUPPLIERS } from '../../lib/suppliers'
+import { computeScore } from '../../lib/scoring'
 
 export default async function handler(
   req: NextApiRequest,
@@ -12,32 +13,40 @@ export default async function handler(
     return res.status(200).json([])
   }
 
-  const { data: parts, error } = await supabase
+  const { data, error } = await supabase
     .from('parts')
     .select('*')
-    .or(`reference.ilike.%${q}%,name.ilike.%${q}%`)
 
-  if (error || !parts) {
+  if (error) {
     console.error(error)
-    return res.status(500).json([])
+    return res.status(500).json({ error: 'Database error' })
   }
 
-  const enriched = parts.map((part) => {
-    const supplier = SUPPLIERS.find(
-      (s) => s.name.toLowerCase() === part.brand?.toLowerCase()
-    )
+  const results = data
+    .map((part) => {
+      const supplier =
+        SUPPLIERS.find(
+          (s) =>
+            s.name.toLowerCase() ===
+            String(part.supplier || '').toLowerCase()
+        ) || null
 
-    let score = supplier?.priority ?? 0
-    if (supplier?.favorite) score += 1000
+      const score = computeScore(
+        {
+          ...part,
+          supplier,
+        },
+        q
+      )
 
-    return {
-      ...part,
-      supplier,
-      score,
-    }
-  })
+      return {
+        ...part,
+        supplier,
+        score,
+      }
+    })
+    .filter((p) => p.score > 0)
+    .sort((a, b) => b.score - a.score)
 
-  enriched.sort((a, b) => b.score - a.score)
-
-  res.status(200).json(enriched)
+  res.status(200).json(results)
 }
