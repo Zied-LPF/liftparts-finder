@@ -1,140 +1,88 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
-type Supplier = {
-  name: string
-  baseUrl: string
-}
-
-type Part = {
+type SearchResult = {
   id: string
   name: string
-  reference: string
-  brand: string
-  supplier?: Supplier | null
+  reference?: string
+  brand?: string
+  supplier?: string
+  supplierUrl?: string
 }
 
-const FAVORITE_SUPPLIER_KEY = 'lpf_favorite_supplier'
-
 export default function Home() {
-  const [query, setQuery] = useState('')
-  const [favoriteSupplier, setFavoriteSupplier] = useState('Sodimas')
-  const [results, setResults] = useState<Part[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // 🔹 Charger le fournisseur favori au démarrage
-  useEffect(() => {
-    const saved = localStorage.getItem(FAVORITE_SUPPLIER_KEY)
-    if (saved) {
-      setFavoriteSupplier(saved)
-    }
-  }, [])
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) return
 
-  // 🔹 Sauvegarder le fournisseur favori à chaque changement
-  useEffect(() => {
-    localStorage.setItem(FAVORITE_SUPPLIER_KEY, favoriteSupplier)
-  }, [favoriteSupplier])
-
-  const search = async () => {
-    if (!query.trim()) return
     setLoading(true)
+    setError(null)
 
-    const res = await fetch(
-      `/api/search?q=${encodeURIComponent(query)}&favoriteSupplier=${encodeURIComponent(
-        favoriteSupplier
-      )}`
-    )
-
-    const data = await res.json()
-    setResults(data)
-    setLoading(false)
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}`)
+      const data = await res.json()
+      setResults(data || [])
+    } catch (err) {
+      setError('Erreur lors de la recherche')
+      setResults([])
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <main
-      style={{
-        maxWidth: 900,
-        margin: '0 auto',
-        padding: 24,
-        fontFamily: 'Arial, sans-serif',
-      }}
-    >
-      <h1 style={{ fontSize: 36, marginBottom: 20 }}>
-        LiftParts Finder
-      </h1>
+    <main style={{ padding: 24 }}>
+      <h1>LiftParts Finder</h1>
 
-      {/* 🔎 BARRE DE RECHERCHE */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 30 }}>
+      {/* Champ de recherche */}
+      <div style={{ marginBottom: 16 }}>
         <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Référence ou mot-clé (ex: LCB)"
-          style={{ flex: 1, padding: 10, fontSize: 16 }}
+          type="text"
+          value={searchTerm}
+          placeholder="Référence, mot-clé, marque…"
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleSearch()
+            }
+          }}
+          style={{ marginRight: 8, width: 260 }}
         />
 
-        <select
-          value={favoriteSupplier}
-          onChange={(e) => setFavoriteSupplier(e.target.value)}
-          style={{ padding: 10, fontSize: 14 }}
-        >
-          <option value="Sodimas">Sodimas</option>
-          <option value="Otis">Otis</option>
-          <option value="Kone">Kone</option>
-          <option value="Schindler">Schindler</option>
-        </select>
-
-        <button
-          onClick={search}
-          style={{ padding: '10px 16px', fontSize: 16, cursor: 'pointer' }}
-        >
-          Rechercher
-        </button>
+        <button onClick={handleSearch}>Rechercher</button>
       </div>
 
-      {/* ⏳ LOADING */}
+      {/* États */}
       {loading && <p>Recherche en cours…</p>}
-
-      {/* 📦 RÉSULTATS */}
-      {!loading && results.length === 0 && query && (
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {!loading && results.length === 0 && searchTerm && (
         <p>Aucune pièce trouvée</p>
       )}
 
-      <div style={{ display: 'grid', gap: 16 }}>
-        {results.map((part) => (
-          <div
-            key={part.id}
-            style={{
-              border: '1px solid #ccc',
-              borderRadius: 6,
-              padding: 16,
-              background: '#fafafa',
-            }}
-          >
-            <strong style={{ fontSize: 18 }}>
-              {part.name}
-            </strong>
+      {/* Résultats */}
+      <ul>
+        {results.map((item) => (
+          <li key={item.id} style={{ marginBottom: 12 }}>
+            <strong>{item.name}</strong>
+            {item.reference && <div>Référence : {item.reference}</div>}
+            {item.brand && <div>Marque : {item.brand}</div>}
+            {item.supplier && <div>Fournisseur : {item.supplier}</div>}
 
-            <div style={{ marginTop: 6 }}>
-              <div>Référence : {part.reference}</div>
-              <div>Marque : {part.brand}</div>
-              <div>Fournisseur : {part.supplier?.name}</div>
-            </div>
-
-            {part.supplier?.baseUrl && (
-              <div style={{ marginTop: 10 }}>
-                <a
-                  href={
-                    part.supplier.baseUrl +
-                    encodeURIComponent(part.reference)
-                  }
-                  target="_blank"
-                >
-                  🔗 Voir chez le fournisseur
-                </a>
-              </div>
+            {item.supplierUrl && (
+              <a
+                href={item.supplierUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Voir chez le fournisseur
+              </a>
             )}
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </main>
   )
 }
