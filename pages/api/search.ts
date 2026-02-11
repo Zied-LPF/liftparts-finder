@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { suppliers } from '@/lib/suppliers'
-import { supabase } from '@/lib/supabaseClient'
+import { suppliers } from '../../lib/suppliers'
+import { supabase } from '../../lib/supabaseClient'
 
 export default async function handler(
   req: NextApiRequest,
@@ -17,19 +17,15 @@ export default async function handler(
   }
 
   /* =========================
-     1️⃣ Récupérer fournisseur favori
+     1️⃣ Fournisseur favori
      ========================= */
-  const { data: settings, error: settingsError } = await supabase
+  const { data: settings } = await supabase
     .from('app_settings')
     .select('favorite_supplier')
     .limit(1)
     .single()
 
-  const favoriteSupplier = settings?.favorite_supplier || null
-
-  if (settingsError) {
-    console.error('Settings error:', settingsError)
-  }
+  const favoriteSupplier = settings?.favorite_supplier ?? null
 
   /* =========================
      2️⃣ Recherche pièces
@@ -42,7 +38,7 @@ export default async function handler(
     )
 
   if (error) {
-    console.error('Search error:', error)
+    console.error(error)
     return res.status(500).json({ error })
   }
 
@@ -51,15 +47,14 @@ export default async function handler(
   }
 
   /* =========================
-     3️⃣ Construction résultats
+     3️⃣ Résultats + scoring
      ========================= */
   const results = parts.map(part => {
     const scoredSuppliers = suppliers
       .filter(s => s.active)
       .map(supplier => {
-        let score = supplier.priority || 0
+        let score = supplier.priority ?? 0
 
-        // ⭐ BOOST fournisseur favori
         if (supplier.name === favoriteSupplier) {
           score += 1000
         }
@@ -67,6 +62,7 @@ export default async function handler(
         return {
           ...supplier,
           score,
+          isFavorite: supplier.name === favoriteSupplier,
           link: `${supplier.baseUrl}${part.reference}`,
         }
       })
@@ -83,5 +79,3 @@ export default async function handler(
      ========================= */
   return res.status(200).json(results)
 }
-
-
