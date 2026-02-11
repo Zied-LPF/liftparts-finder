@@ -1,43 +1,23 @@
 export type Supplier = {
+  id: string;
   name: string;
   baseUrl: string;
-  priority: number;
-  active: boolean;
+  searchUrl?: string;
+  autoSearch: boolean;
 };
 
-export const SUPPLIERS: Supplier[] = [
+export const suppliers: Supplier[] = [
   {
+    id: "mysodimas",
     name: "MySodimas",
-    baseUrl: "https://www.mysodimas.com",
-    priority: 100,
-    active: true,
+    baseUrl: "https://my.sodimas.com",
+    autoSearch: false,
   },
   {
-    name: "ElvaCenter",
-    baseUrl: "https://www.elvacenter.com",
-    priority: 50,
-    active: true,
-  },
-  {
+    id: "elevatorshop",
     name: "ElevatorShop",
     baseUrl: "https://www.elevatorshop.de/fr/",
-    priority: 30,
-    active: true,
+    searchUrl: "https://www.elevatorshop.de/fr/?search=",
+    autoSearch: true,
   },
 ];
-
-export function getRankedSuppliers(): Supplier[] {
-  return [...SUPPLIERS]
-    .filter((s) => s.active)
-    .sort((a, b) => b.priority - a.priority);
-}
-
-/**
- * Génère une URL fournisseur avec recherche pré-remplie
- */
-export function buildSupplierSearchUrl(
-  supplier: Supplier,
-  reference: string
-): string {
-  return `${supplier.baseUrl}?search=${encodeURIComponent(reference)}`;
-}

@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
-import { getRankedSuppliers, buildSupplierSearchUrl } from "../../lib/suppliers";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,15 +30,5 @@ export default async function handler(
     return res.status(500).json({ error: "Database error" });
   }
 
-  const suppliers = getRankedSuppliers();
-
-  const enrichedData = (data ?? []).map((part) => ({
-    ...part,
-    supplierLinks: suppliers.map((supplier) => ({
-      name: supplier.name,
-      url: buildSupplierSearchUrl(supplier, part.reference),
-    })),
-  }));
-
-  return res.status(200).json(enrichedData);
+  return res.status(200).json(data ?? []);
 }
