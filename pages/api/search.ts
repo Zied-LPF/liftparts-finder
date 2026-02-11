@@ -1,44 +1,43 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { SUPPLIERS, Supplier } from '../../lib/suppliers'
+import { SUPPLIERS } from '../../lib/suppliers'
 import { supabase } from '../../lib/supabase'
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+  const q = String(req.query.q || '').trim()
 
-  const query = (req.query.q as string)?.trim()
-
-  if (!query) {
+  if (!q) {
     return res.status(200).json([])
   }
 
-  const { data, error } = await supabase
+  const { data: parts, error } = await supabase
     .from('parts')
     .select('*')
-    .or(`name.ilike.%${query}%,reference.ilike.%${query}%`)
+    .or(`reference.ilike.%${q}%,name.ilike.%${q}%`)
 
-  if (error) {
+  if (error || !parts) {
     console.error(error)
-    return res.status(500).json({ error: error.message })
+    return res.status(500).json([])
   }
 
-  const results = (data || []).map((part) => {
-    const supplier: Supplier | undefined = SUPPLIERS.find(
-      (s) =>
-        s.name.toLowerCase() ===
-        (part.brand || '').toLowerCase()
+  const enriched = parts.map((part) => {
+    const supplier = SUPPLIERS.find(
+      (s) => s.name.toLowerCase() === part.brand?.toLowerCase()
     )
+
+    let score = supplier?.priority ?? 0
+    if (supplier?.favorite) score += 1000
 
     return {
       ...part,
       supplier,
-      supplierPriority: supplier ? supplier.priority : 0,
+      score,
     }
   })
 
-  return res.status(200).json(results)
+  enriched.sort((a, b) => b.score - a.score)
+
+  res.status(200).json(enriched)
 }
