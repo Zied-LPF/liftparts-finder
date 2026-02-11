@@ -1,110 +1,83 @@
 import { useState } from 'react'
-import Head from 'next/head'
-import { Supplier } from '../lib/suppliers'
+
+type Supplier = {
+  name: string
+  baseUrl: string
+}
 
 type Part = {
-  id?: string
+  id: string
   name: string
   reference: string
-  brand?: string
-  supplier?: Supplier
+  brand: string
+  supplier?: Supplier | null
 }
 
 export default function Home() {
   const [query, setQuery] = useState('')
+  const [favoriteSupplier, setFavoriteSupplier] = useState('Sodimas')
   const [results, setResults] = useState<Part[]>([])
-  const [loading, setLoading] = useState(false)
 
-  const handleSearch = async () => {
-    if (!query.trim()) return
-
-    setLoading(true)
-
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
-      const data = await res.json()
-      setResults(data || [])
-    } catch (err) {
-      console.error('Search error', err)
-      setResults([])
-    } finally {
-      setLoading(false)
-    }
+  const search = async () => {
+    const res = await fetch(
+      `/api/search?q=${encodeURIComponent(query)}&favoriteSupplier=${encodeURIComponent(
+        favoriteSupplier
+      )}`
+    )
+    const data = await res.json()
+    setResults(data)
   }
 
   return (
-    <>
-      <Head>
-        <title>LiftParts Finder</title>
-      </Head>
+    <main style={{ padding: 20 }}>
+      <h1>LiftParts Finder</h1>
 
-      <main style={{ padding: 20, fontFamily: 'serif' }}>
-        <h1>LiftParts Finder</h1>
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Référence ou mot-clé"
+      />
 
-        {/* Recherche */}
-        <div style={{ marginBottom: 20 }}>
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Référence ou mot-clé"
-            style={{ marginRight: 8 }}
-          />
-          <button onClick={handleSearch}>Rechercher</button>
-        </div>
+      <select
+        value={favoriteSupplier}
+        onChange={(e) => setFavoriteSupplier(e.target.value)}
+        style={{ marginLeft: 10 }}
+      >
+        <option value="Sodimas">Sodimas</option>
+        <option value="Otis">Otis</option>
+        <option value="Kone">Kone</option>
+        <option value="Schindler">Schindler</option>
+      </select>
 
-        {/* Chargement */}
-        {loading && <p>Recherche en cours…</p>}
+      <button onClick={search} style={{ marginLeft: 10 }}>
+        Rechercher
+      </button>
 
-        {/* Résultats */}
-        {!loading && results.length === 0 && query && (
-          <p>Aucune pièce trouvée</p>
-        )}
-
-        <ul>
-          {results.map((part, index) => {
-            const supplierLink =
-              part.supplier && part.reference
-                ? part.supplier.searchUrl +
+      <ul>
+        {results.map((part) => (
+          <li key={part.id} style={{ marginTop: 15 }}>
+            <strong>{part.name}</strong>
+            <br />
+            Référence : {part.reference}
+            <br />
+            Marque : {part.brand}
+            <br />
+            Fournisseur : {part.supplier?.name}
+            <br />
+            {part.supplier?.baseUrl && (
+              <a
+                href={
+                  part.supplier.baseUrl +
                   encodeURIComponent(part.reference)
-                : null
-
-            return (
-              <li key={index} style={{ marginBottom: 16 }}>
-                <div
-                  style={{
-                    border: '1px solid #ccc',
-                    padding: 12,
-                    maxWidth: 500,
-                  }}
-                >
-                  <strong>{part.name}</strong>
-                  <br />
-                  Référence : {part.reference}
-                  <br />
-                  {part.brand && <>Marque : {part.brand}<br /></>}
-                  {part.supplier && (
-                    <>
-                      Fournisseur : {part.supplier.name}
-                      <br />
-                    </>
-                  )}
-
-                  {supplierLink && (
-                    <a
-                      href={supplierLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Voir chez le fournisseur
-                    </a>
-                  )}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      </main>
-    </>
+                }
+                target="_blank"
+              >
+                Voir chez le fournisseur
+              </a>
+            )}
+          </li>
+        ))}
+      </ul>
+    </main>
   )
 }

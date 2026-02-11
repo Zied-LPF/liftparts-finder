@@ -8,6 +8,7 @@ export default async function handler(
   res: NextApiResponse
 ) {
   const q = String(req.query.q || '').trim()
+  const favoriteSupplier = String(req.query.favoriteSupplier || '').trim()
 
   if (!q) {
     return res.status(200).json([])
@@ -36,7 +37,8 @@ export default async function handler(
           ...part,
           supplier,
         },
-        q
+        q,
+        favoriteSupplier
       )
 
       return {

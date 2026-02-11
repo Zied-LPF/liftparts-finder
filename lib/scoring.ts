@@ -1,7 +1,6 @@
 import { Supplier } from './suppliers'
 
-export type Part = {
-  id: string
+type PartWithSupplier = {
   name?: string
   reference?: string
   brand?: string
@@ -9,44 +8,39 @@ export type Part = {
 }
 
 export function computeScore(
-  part: Part,
+  part: PartWithSupplier,
   query: string,
   favoriteSupplier?: string
 ): number {
-  const q = query.toLowerCase().trim()
+  const q = query.toLowerCase()
   let score = 0
 
-  // 🔑 Référence exacte
-  if (part.reference?.toLowerCase() === q) {
+  // 🔹 Référence = ultra prioritaire
+  if (part.reference?.toLowerCase().includes(q)) {
     score += 100
   }
 
-  // 🔍 Référence partielle
-  if (part.reference?.toLowerCase().includes(q)) {
+  // 🔹 Nom
+  if (part.name?.toLowerCase().includes(q)) {
     score += 50
   }
 
-  // 🧾 Nom contient le mot
-  if (part.name?.toLowerCase().includes(q)) {
+  // 🔹 Marque
+  if (part.brand?.toLowerCase().includes(q)) {
     score += 20
   }
 
-  // 🏷️ Marque
-  if (part.brand?.toLowerCase().includes(q)) {
-    score += 15
-  }
-
-  // 🏭 Priorité fournisseur
-  if (part.supplier?.priority) {
-    score += part.supplier.priority
-  }
-
-  // ⭐ Fournisseur favori (prévu V1.1)
+  // 🔹 Fournisseur favori ⭐
   if (
     favoriteSupplier &&
     part.supplier?.name.toLowerCase() === favoriteSupplier.toLowerCase()
   ) {
     score += 30
+  }
+
+  // 🔹 Priorité fournisseur (statique)
+  if (part.supplier?.priority) {
+    score += part.supplier.priority
   }
 
   return score
