@@ -12,6 +12,7 @@ type Supplier = {
   name: string;
   baseUrl: string;
   autoSearch: boolean;
+  favorite?: boolean;
 };
 
 const SUPPLIERS: Supplier[] = [
@@ -20,6 +21,7 @@ const SUPPLIERS: Supplier[] = [
     name: "MySodimas",
     baseUrl: "https://www.mysodimas.com",
     autoSearch: false,
+    favorite: true, // prêt pour le scoring métier
   },
   {
     id: "elevatorshop",
@@ -28,6 +30,30 @@ const SUPPLIERS: Supplier[] = [
     autoSearch: false,
   },
 ];
+
+function Badge({
+  label,
+  color,
+}: {
+  label: string;
+  color: string;
+}) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "2px 6px",
+        fontSize: "0.7rem",
+        borderRadius: "4px",
+        backgroundColor: color,
+        color: "#fff",
+        marginLeft: "6px",
+      }}
+    >
+      {label}
+    </span>
+  );
+}
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -61,7 +87,7 @@ export default function Home() {
         margin: "0 auto",
       }}
     >
-      <h1 style={{ marginBottom: "1rem" }}>LiftParts Finder</h1>
+      <h1>LiftParts Finder</h1>
 
       {/* SEARCH */}
       <form
@@ -100,9 +126,9 @@ export default function Home() {
               backgroundColor: "#fafafa",
             }}
           >
-            <h3 style={{ margin: "0 0 0.5rem 0" }}>{part.name}</h3>
+            <h3>{part.name}</h3>
 
-            <div style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}>
+            <div style={{ fontSize: "0.9rem" }}>
               <strong>Référence :</strong> {part.reference}
               <br />
               <strong>Marque :</strong> {part.brand ?? "-"}
@@ -117,6 +143,7 @@ export default function Home() {
               }}
             >
               <strong>Fournisseurs</strong>
+
               {SUPPLIERS.map((supplier) => (
                 <div key={supplier.id} style={{ marginTop: "0.4rem" }}>
                   <a
@@ -126,10 +153,23 @@ export default function Home() {
                   >
                     🔗 {supplier.name}
                   </a>
-                  <div style={{ fontSize: "0.8rem", color: "#666" }}>
-                    ℹ️ Copiez la référence{" "}
-                    <strong>{part.reference}</strong> dans la recherche du site
-                  </div>
+
+                  {supplier.favorite && (
+                    <Badge label="FAVORI" color="#f5a623" />
+                  )}
+
+                  {supplier.autoSearch ? (
+                    <Badge label="AUTO" color="#2ecc71" />
+                  ) : (
+                    <Badge label="MANUEL" color="#3498db" />
+                  )}
+
+                  {!supplier.autoSearch && (
+                    <div style={{ fontSize: "0.8rem", color: "#666" }}>
+                      ℹ️ Copier la référence{" "}
+                      <strong>{part.reference}</strong> dans la recherche du site
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
