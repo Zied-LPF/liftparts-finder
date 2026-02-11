@@ -1,14 +1,12 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { Supplier } from "../../lib/suppliers";
+import { SUPPLIERS, Supplier } from "../../lib/suppliers";
 
 let supabase: SupabaseClient | null = null;
 
 function getSupabase() {
-  if (typeof window === "undefined") return null;
-
   if (!supabase) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_ANON_KEY;
 
     if (!url || !key) {
       console.warn("Supabase env vars missing");
