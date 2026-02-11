@@ -1,37 +1,87 @@
-import type { NextApiRequest, NextApiResponse } from "next"
-import { createClient } from "@supabase/supabase-js"
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import type { NextApiRequest, NextApiResponse } from 'next'
+import { suppliers } from '@/lib/suppliers'
+import { supabase } from '@/lib/supabaseClient'
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // ⛔ désactive totalement le cache
-  res.setHeader("Cache-Control", "no-store, max-age=0")
-
-  if (req.method !== "GET") {
-    return res.status(405).json({ error: "Method not allowed" })
+  if (req.method !== 'GET') {
+    return res.status(405).end()
   }
 
-  const query = req.query.q as string
+  const { q } = req.query
 
-  if (!query) {
-    return res.status(400).json({ error: "Missing query parameter" })
+  if (!q || typeof q !== 'string') {
+    return res.status(200).json([])
   }
 
-  const { data, error } = await supabase
-    .from("parts")
-    .select("*")
-    .ilike("reference", `%${query}%`)
+  /* =========================
+     1️⃣ Récupérer fournisseur favori
+     ========================= */
+  const { data: settings, error: settingsError } = await supabase
+    .from('app_settings')
+    .select('favorite_supplier')
+    .limit(1)
+    .single()
+
+  const favoriteSupplier = settings?.favorite_supplier || null
+
+  if (settingsError) {
+    console.error('Settings error:', settingsError)
+  }
+
+  /* =========================
+     2️⃣ Recherche pièces
+     ========================= */
+  const { data: parts, error } = await supabase
+    .from('parts')
+    .select('*')
+    .or(
+      `reference.ilike.%${q}%,name.ilike.%${q}%,brand.ilike.%${q}%`
+    )
 
   if (error) {
-    console.error("Supabase error:", error)
-    return res.status(500).json({ error: "Database error" })
+    console.error('Search error:', error)
+    return res.status(500).json({ error })
   }
 
-  return res.status(200).json(data ?? [])
+  if (!parts || parts.length === 0) {
+    return res.status(200).json([])
+  }
+
+  /* =========================
+     3️⃣ Construction résultats
+     ========================= */
+  const results = parts.map(part => {
+    const scoredSuppliers = suppliers
+      .filter(s => s.active)
+      .map(supplier => {
+        let score = supplier.priority || 0
+
+        // ⭐ BOOST fournisseur favori
+        if (supplier.name === favoriteSupplier) {
+          score += 1000
+        }
+
+        return {
+          ...supplier,
+          score,
+          link: `${supplier.baseUrl}${part.reference}`,
+        }
+      })
+      .sort((a, b) => b.score - a.score)
+
+    return {
+      ...part,
+      suppliers: scoredSuppliers,
+    }
+  })
+
+  /* =========================
+     4️⃣ Réponse API
+     ========================= */
+  return res.status(200).json(results)
 }
+
+
