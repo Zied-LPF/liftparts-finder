@@ -16,23 +16,23 @@ export default async function handler(
     return res.status(200).json({ parts: [] })
   }
 
+  // 🔍 Recherche SUR PLUSIEURS CHAMPS
   const { data, error } = await supabase
     .from('parts')
     .select('*')
-    .ilike('name', `%${q}%`)
+    .or(
+      `reference.ilike.%${q}%,name.ilike.%${q}%`
+    )
 
   if (error) {
-    console.error(error)
+    console.error('Supabase error:', error)
     return res.status(500).json({ error: 'Database error' })
   }
 
-  const partsWithSuppliers = (data || []).map((part) => {
-    const suppliers = SUPPLIERS.filter(s => s.active)
-    return {
-      ...part,
-      suppliers
-    }
-  })
+  const partsWithSuppliers = (data || []).map((part) => ({
+    ...part,
+    suppliers: SUPPLIERS.filter(s => s.active)
+  }))
 
   return res.status(200).json({ parts: partsWithSuppliers })
 }
