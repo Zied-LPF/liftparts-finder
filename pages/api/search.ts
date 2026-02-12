@@ -1,37 +1,38 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabase } from '../../lib/supabase'
 
-type SupplierResult = {
-  name: string
-  searchUrl: string
-  score: number
-}
-
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<SupplierResult[]>
+  res: NextApiResponse
 ) {
-  const q = (req.query.q as string)?.trim()
+  const query = (req.query.q as string)?.trim()
 
-  if (!q) {
-    return res.status(200).json([])
+  if (!query) {
+    return res.status(400).json({ error: 'Query manquante' })
   }
 
-  const { data: suppliers, error } = await supabase
-    .from('suppliers')
-    .select('name, base_url, priority')
-    .eq('active', true)
+  try {
+    const { data, error } = await supabase
+      .from('parts')
+      .select(`
+        id,
+        name,
+        reference,
+        brand,
+        category,
+        notes
+      `)
+      .or(`name.ilike.%${query}%,reference.ilike.%${query}%`)
+      .limit(50)
 
-  if (error || !suppliers) {
-    console.error(error)
-    return res.status(500).json([])
+    if (error) {
+      console.error('SUPABASE ERROR:', error)
+      return res.status(500).json({ error: error.message })
+    }
+
+    return res.status(200).json(data ?? [])
+  } catch (err) {
+    console.error('SERVER ERROR:', err)
+    return res.status(500).json({ error: 'Erreur serveur' })
   }
-
-  const results: SupplierResult[] = suppliers.map((s) => ({
-    name: s.name,
-    searchUrl: `${s.base_url}${encodeURIComponent(q)}`,
-    score: s.priority ?? 0,
-  }))
-
-  res.status(200).json(results)
 }

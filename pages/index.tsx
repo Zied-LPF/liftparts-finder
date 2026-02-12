@@ -1,72 +1,78 @@
 import { useState } from 'react'
+import Link from 'next/link'
 
-type Result = {
+type Part = {
+  id: string
   name: string
-  searchUrl: string
-  score: number
+  reference: string
+  brand?: string
+  category?: string
+  notes?: string
 }
 
 export default function Home() {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<Result[]>([])
+  const [parts, setParts] = useState<Part[]>([])
   const [loading, setLoading] = useState(false)
+  const [searched, setSearched] = useState(false)
 
   const runSearch = async () => {
     if (!query.trim()) return
 
     setLoading(true)
+    setSearched(true)
+
     const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
     const data = await res.json()
 
-    // sécurité + tri par score décroissant
-    const sorted = Array.isArray(data)
-      ? data.sort((a, b) => b.score - a.score)
-      : []
-
-    setResults(sorted)
+    setParts(Array.isArray(data) ? data : [])
     setLoading(false)
-  }
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') runSearch()
   }
 
   return (
     <main
       style={{
-        padding: 24,
+        padding: 32,
         fontFamily: 'Arial, sans-serif',
-        background: '#f5f5f5',
+        background: '#f4f6f8',
         minHeight: '100vh',
       }}
     >
-      <h1 style={{ marginBottom: 20 }}>🔧 LiftParts Finder</h1>
+      <h1 style={{ marginBottom: 24, fontSize: 26 }}>
+        🔧 LiftParts Finder
+      </h1>
 
-      {/* Barre de recherche */}
+      {/* Recherche */}
       <div
         style={{
           display: 'flex',
-          gap: 10,
-          marginBottom: 24,
+          gap: 12,
+          marginBottom: 28,
+          maxWidth: 640,
         }}
       >
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder="Référence ou mot-clé"
+          onKeyDown={(e) => e.key === 'Enter' && runSearch()}
+          placeholder="Référence ou mot-clé (ex: contact, SOD-LOCK…)"
           style={{
-            padding: 10,
-            width: 260,
-            fontSize: 14,
+            flex: 1,
+            padding: '12px 14px',
+            fontSize: 15,
+            borderRadius: 6,
+            border: '1px solid #ccc',
           }}
         />
         <button
           onClick={runSearch}
           style={{
-            padding: '10px 16px',
+            padding: '12px 18px',
             fontSize: 14,
             cursor: 'pointer',
+            borderRadius: 6,
+            border: '1px solid #888',
+            background: '#fff',
           }}
         >
           Rechercher
@@ -75,49 +81,80 @@ export default function Home() {
 
       {loading && <p>Recherche en cours…</p>}
 
-      {!loading && results.length > 0 && (
-        <div style={{ maxWidth: 720 }}>
-          {results.map((r, index) => (
-            <div
-              key={r.name}
-              style={{
-                background: '#fff',
-                border: '1px solid #ddd',
-                borderRadius: 4,
-                padding: 12,
-                marginBottom: 10,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <div>
-                <strong>
-                  {index === 0 ? '⭐ ' : ''}
-                  {r.name}
-                </strong>
-              </div>
-
-              <a
-                href={r.searchUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  padding: '6px 12px',
-                  border: '1px solid #000',
-                  textDecoration: 'none',
-                  fontSize: 13,
-                }}
-              >
-                Voir chez le fournisseur →
-              </a>
-            </div>
-          ))}
-        </div>
+      {!loading && searched && parts.length === 0 && (
+        <p style={{ color: '#666' }}>Aucune pièce trouvée</p>
       )}
 
-      {!loading && results.length === 0 && query && (
-        <p>Aucun fournisseur trouvé</p>
+      {!loading && parts.length > 0 && (
+        <div style={{ maxWidth: 900 }}>
+          {parts.map((part) => (
+            <Link
+              key={part.id}
+              href={`/parts/${part.id}`}
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
+              <div
+                style={{
+                  background: '#fff',
+                  border: '1px solid #ddd',
+                  borderRadius: 8,
+                  padding: 16,
+                  marginBottom: 12,
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'baseline',
+                    marginBottom: 6,
+                  }}
+                >
+                  <strong style={{ fontSize: 16 }}>
+                    {part.name}
+                  </strong>
+                  <span
+                    style={{
+                      fontSize: 13,
+                      color: '#666',
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    {part.reference}
+                  </span>
+                </div>
+
+                {part.brand && (
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      background: '#eef2f6',
+                      padding: '4px 10px',
+                      borderRadius: 12,
+                      fontSize: 12,
+                      marginBottom: 6,
+                    }}
+                  >
+                    {part.brand}
+                  </span>
+                )}
+
+                {part.notes && (
+                  <p
+                    style={{
+                      marginTop: 8,
+                      fontSize: 13,
+                      color: '#333',
+                    }}
+                  >
+                    {part.notes}
+                  </p>
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
       )}
     </main>
   )
