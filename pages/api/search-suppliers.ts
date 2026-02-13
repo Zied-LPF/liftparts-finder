@@ -1,90 +1,89 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import * as cheerio from 'cheerio'
 
-type Result = {
+type SupplierResult = {
   supplier: string
-  title: string
-  image?: string
+  title: string | null
+  image: string | null
   link: string
 }
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Result[]>
+  res: NextApiResponse
 ) {
-  const q = String(req.query.q || '').trim()
-  if (!q) return res.status(200).json([])
+  const q = (req.query.q as string)?.trim()
 
-  const results: Result[] = []
-
-  /* =========================
-     SODIMAS
-  ========================== */
-  try {
-    const url = `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`
-    const html = await fetch(url).then(r => r.text())
-    const $ = cheerio.load(html)
-
-    const firstLink = $('a[href*="/produit"]').first()
-    const link = firstLink.attr('href')
-
-    if (link) {
-      const productPage = await fetch(`https://my.sodimas.com${link}`).then(r => r.text())
-      const $$ = cheerio.load(productPage)
-
-      const title =
-        $$('h1').first().text().trim() || q
-
-      let image =
-        $$('img[src*="produit"]').attr('src') ||
-        $$('img[src*="catalog"]').attr('src')
-
-      if (image && image.startsWith('/')) {
-        image = `https://my.sodimas.com${image}`
-      }
-
-      results.push({
-        supplier: 'Sodimas',
-        title,
-        image,
-        link: `https://my.sodimas.com${link}`,
-      })
-    }
-  } catch (e) {
-    console.error('Sodimas error', e)
+  if (!q) {
+    return res.status(400).json({ error: 'Query manquante' })
   }
 
-  /* =========================
-     ELVACENTER
-  ========================== */
+  const results: SupplierResult[] = []
+
+  /* ===========================
+     🔹 SODIMAS (MODE PRO)
+     =========================== */
+  results.push({
+    supplier: 'Sodimas',
+    title: null,
+    image: 'https://my.sodimas.com/home/assets/img/com/logo.png',
+    link: `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`,
+  })
+
+  /* ===========================
+     🔹 ELVACENTER (MATCH EXACT)
+     =========================== */
   try {
-    const url = `https://shop.elvacenter.com/#/dfclassic/query=${encodeURIComponent(q)}`
-    const html = await fetch(url).then(r => r.text())
+    const searchUrl = `https://shop.elvacenter.com/#/dfclassic/query=${encodeURIComponent(q)}`
+    const html = await fetch(searchUrl).then(r => r.text())
     const $ = cheerio.load(html)
 
-    const product = $('.product, li.product').first()
+    let matchedProduct: SupplierResult | null = null
 
-    if (product.length) {
-      const title =
-        product.find('h2, h3, .woocommerce-loop-product__title').first().text().trim() || q
+    $('.product-grid-item').each((_, el) => {
+      if (matchedProduct) return
 
-      let image =
-        product.find('img.wp-post-image').attr('src') ||
-        product.find('img').first().attr('src')
+      const title = $(el).find('.product-title').text().trim()
+      const link = $(el).find('a').attr('href') || ''
+      const image =
+        $(el).find('img').attr('src') ||
+        $(el).find('img').attr('data-src') ||
+        null
 
-      const link =
-        product.find('a').first().attr('href') ||
-        url
+      const normalizedQ = q.toLowerCase()
 
+      if (
+        title.toLowerCase().includes(normalizedQ) ||
+        link.toLowerCase().includes(normalizedQ)
+      ) {
+        matchedProduct = {
+          supplier: 'Elvacenter',
+          title,
+          image,
+          link: link.startsWith('http')
+            ? link
+            : `https://shop.elvacenter.com${link}`,
+        }
+      }
+    })
+
+    if (matchedProduct) {
+      results.push(matchedProduct)
+    } else {
       results.push({
         supplier: 'Elvacenter',
-        title,
-        image,
-        link,
+        title: null,
+        image: 'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
+        link: searchUrl,
       })
     }
-  } catch (e) {
-    console.error('Elvacenter error', e)
+  } catch (err) {
+    results.push({
+      supplier: 'Elvacenter',
+      title: null,
+      image: 'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
+      link: `https://shop.elvacenter.com/#/dfclassic/query=${encodeURIComponent(q)}`,
+    })
   }
 
   return res.status(200).json(results)
