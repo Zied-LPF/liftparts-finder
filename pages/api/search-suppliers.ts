@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import * as cheerio from 'cheerio'
 
 type SupplierResult = {
   supplier: string
@@ -20,20 +21,76 @@ export default async function handler(
   const results: SupplierResult[] = []
 
   /* =====================
-     🔹 SODIMAS (SAFE)
+     🔹 SODIMAS (REAL SCRAPING)
      ===================== */
-  results.push({
-    supplier: 'Sodimas',
-    title: null,
-    description: null,
-    reference: null,
-    image: null,
-    fallbackImage: 'https://my.sodimas.com/home/assets/img/com/logo.png',
-    link: `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`,
-  })
+  try {
+    const searchUrl = `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`
+    const html = await fetch(searchUrl).then(r => r.text())
+    const $ = cheerio.load(html)
+
+    let found: SupplierResult | null = null
+
+    $('.product-item').each((_, el) => {
+      if (found) return
+
+      const title = $(el).find('.product-item-link').text().trim()
+      const link = $(el).find('.product-item-link').attr('href') || ''
+      const reference = $(el).find('.sku').text().trim() || null
+      const image =
+        $(el).find('img').attr('src') ||
+        $(el).find('img').attr('data-src') ||
+        null
+
+      if (
+        title.toLowerCase().includes(q.toLowerCase()) ||
+        reference?.toLowerCase().includes(q.toLowerCase())
+      ) {
+        found = {
+          supplier: 'Sodimas',
+          title,
+          description: title,
+          reference,
+          image: image?.startsWith('http')
+            ? image
+            : image
+            ? `https://my.sodimas.com${image}`
+            : null,
+          fallbackImage:
+            'https://my.sodimas.com/home/assets/img/com/logo.png',
+          link: link.startsWith('http')
+            ? link
+            : `https://my.sodimas.com${link}`,
+        }
+      }
+    })
+
+    results.push(
+      found ?? {
+        supplier: 'Sodimas',
+        title: null,
+        description: null,
+        reference: null,
+        image: null,
+        fallbackImage:
+          'https://my.sodimas.com/home/assets/img/com/logo.png',
+        link: searchUrl,
+      }
+    )
+  } catch {
+    results.push({
+      supplier: 'Sodimas',
+      title: null,
+      description: null,
+      reference: null,
+      image: null,
+      fallbackImage:
+        'https://my.sodimas.com/home/assets/img/com/logo.png',
+      link: `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`,
+    })
+  }
 
   /* =====================
-     🔹 ELVACENTER (PRO SAFE MODE)
+     🔹 ELVACENTER (SAFE MODE)
      ===================== */
   results.push({
     supplier: 'Elvacenter',
