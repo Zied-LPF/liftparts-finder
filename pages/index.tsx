@@ -14,17 +14,15 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SupplierResult[]>([])
   const [loading, setLoading] = useState(false)
-  const [lastSearch, setLastSearch] = useState('')
 
   const runSearch = async () => {
     if (!query.trim()) return
     setLoading(true)
-    setLastSearch(query.trim())
-
     const res = await fetch(
-      `/api/search-suppliers?q=${encodeURIComponent(query.trim())}`
+      `/api/search-suppliers?q=${encodeURIComponent(query)}`
     )
-    setResults(await res.json())
+    const data = await res.json()
+    setResults(data)
     setLoading(false)
   }
 
@@ -52,80 +50,72 @@ export default function Home() {
           gap: 24,
         }}
       >
-        {results.map((r) => {
-          const imageToShow = r.image || r.fallbackImage
+        {results.map((r) => (
+          <div
+            key={r.supplier}
+            style={{ background: '#fff', padding: 20, borderRadius: 8 }}
+          >
+            <h3>{r.supplier}</h3>
 
-          return (
             <div
-              key={r.supplier}
-              style={{ background: '#fff', padding: 20, borderRadius: 8 }}
+              style={{
+                height: 180,
+                border: '1px solid #ddd',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              <h3>{r.supplier}</h3>
+              <img
+                src={r.image ?? r.fallbackImage}
+                alt={r.title ?? r.supplier}
+                style={{ maxHeight: '100%', maxWidth: '100%' }}
+              />
+            </div>
 
+            <strong>
+              {r.title ?? 'Résultats disponibles chez ce fournisseur'}
+            </strong>
+
+            {r.description && (
+              <p style={{ fontSize: 13, color: '#555' }}>{r.description}</p>
+            )}
+
+            {r.reference && (
               <div
                 style={{
-                  height: 180,
-                  border: '1px solid #ddd',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: 12,
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  color: '#666',
                 }}
               >
-                <img
-                  src={imageToShow}
-                  alt={r.title ?? r.supplier}
-                  style={{ maxHeight: '100%', maxWidth: '100%' }}
-                />
+                Référence : {r.reference}
               </div>
+            )}
 
-              <strong>
-                {r.title ?? 'Résultats disponibles chez ce fournisseur'}
-              </strong>
-
-              {r.description && (
-                <p style={{ fontSize: 13, color: '#555', marginTop: 6 }}>
-                  {r.description}
-                </p>
-              )}
-
-              {r.reference && (
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontFamily: 'monospace',
-                    color: '#666',
-                    marginTop: 6,
-                  }}
-                >
-                  Référence fournisseur : {r.reference}
-                </div>
-              )}
-
-              <div style={{ fontSize: 12, marginTop: 4, color: '#666' }}>
-                Recherche : {lastSearch}
-              </div>
-
-              <a
-                href={r.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'block',
-                  marginTop: 12,
-                  background: '#0d6efd',
-                  color: '#fff',
-                  textAlign: 'center',
-                  padding: 10,
-                  borderRadius: 6,
-                  textDecoration: 'none',
-                }}
-              >
-                Voir chez {r.supplier}
-              </a>
+            <div style={{ fontSize: 12, marginTop: 4, color: '#666' }}>
+              Recherche : {query}
             </div>
-          )
-        })}
+
+            <a
+              href={r.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'block',
+                marginTop: 12,
+                background: '#0d6efd',
+                color: '#fff',
+                textAlign: 'center',
+                padding: 10,
+                borderRadius: 6,
+                textDecoration: 'none',
+              }}
+            >
+              Voir chez {r.supplier}
+            </a>
+          </div>
+        ))}
       </div>
     </main>
   )
