@@ -1,101 +1,47 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import * as cheerio from 'cheerio'
+import { suppliers } from '../../lib/suppliers'
 
 type SupplierResult = {
   supplier: string
-  title: string | null
-  description: string | null
-  reference: string | null
-  image: string | null
+  title: string
+  reference: string
+  image?: string
   link: string
-  fallbackImage: string
+  searched: string
 }
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse<SupplierResult[]>
 ) {
-  const q = (req.query.q as string)?.trim()
-  if (!q) return res.status(400).json({ error: 'Query manquante' })
+  const q = (req.query.q as string || '').trim()
+
+  if (!q) {
+    return res.status(200).json([])
+  }
 
   const results: SupplierResult[] = []
 
-  /* =====================
-     🔹 SODIMAS (SAFE)
-     ===================== */
-  results.push({
-    supplier: 'Sodimas',
-    title: null,
-    description: null,
-    reference: q,
-    image: null,
-    fallbackImage: 'https://my.sodimas.com/home/assets/img/com/logo.png',
-    link: `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`,
-  })
+  for (const supplier of suppliers) {
+    try {
+      // ⚠️ ici on suppose que chaque supplier a déjà une logique interne
+      // qui retourne title / reference / image / link
+      const data = await supplier.search(q)
 
-  /* =====================
-     🔹 ELVACENTER
-     ===================== */
-  try {
-    const searchUrl = `https://shop.elvacenter.com/#/dfclassic/query=${encodeURIComponent(q)}`
-    const html = await fetch(searchUrl).then(r => r.text())
-    const $ = cheerio.load(html)
+      if (!data) continue
 
-    let match: SupplierResult | null = null
-
-    $('.product-grid-item').each((_, el) => {
-      if (match) return
-
-      const title = $(el).find('.product-title').text().trim()
-      const link = $(el).find('a').attr('href') || ''
-      const image =
-        $(el).find('img').attr('src') ||
-        $(el).find('img').attr('data-src') ||
-        null
-
-      if (
-        title.toLowerCase().includes(q.toLowerCase()) ||
-        link.toLowerCase().includes(q.toLowerCase())
-      ) {
-        match = {
-          supplier: 'Elvacenter',
-          title,
-          description: title, // Elvacenter = titre descriptif
-          reference: q,
-          image,
-          fallbackImage:
-            'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
-          link: link.startsWith('http')
-            ? link
-            : `https://shop.elvacenter.com${link}`,
-        }
-      }
-    })
-
-    results.push(
-      match ?? {
-        supplier: 'Elvacenter',
-        title: null,
-        description: null,
-        reference: q,
-        image: null,
-        fallbackImage:
-          'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
-        link: searchUrl,
-      }
-    )
-  } catch {
-    results.push({
-      supplier: 'Elvacenter',
-      title: null,
-      description: null,
-      reference: q,
-      image: null,
-      fallbackImage:
-        'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
-      link: `https://shop.elvacenter.com/#/dfclassic/query=${encodeURIComponent(q)}`,
-    })
+      results.push({
+        supplier: supplier.name,
+        title: data.title,
+        reference: data.reference,        // ✅ référence réelle fournisseur
+        image: data.image || undefined,   // ✅ image réelle si dispo
+        link: data.link,
+        searched: q                        // ✅ ce que l’utilisateur a tapé
+      })
+    } catch (err) {
+      console.error(`Erreur fournisseur ${supplier.name}`, err)
+    }
   }
 
-  return res.status(200).json(results)
+  res.status(200).json(results)
 }
