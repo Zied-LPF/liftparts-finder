@@ -3,7 +3,7 @@ import { suppliers } from '../../lib/suppliers'
 
 type SupplierResult = {
   supplier: string
-  searchQuery: string
+  searchedValue: string
   productRef?: string
   title?: string
   description?: string
@@ -24,43 +24,42 @@ export default async function handler(
   const results: SupplierResult[] = []
 
   for (const supplier of suppliers) {
-    // 🔹 SODIMAS
+    // ✅ SODIMAS (pas de scraping produit pour l’instant)
     if (supplier.name === 'Sodimas') {
       results.push({
         supplier: 'Sodimas',
-        searchQuery: q,
+        searchedValue: q,
         link: `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`
-        // Sodimas = pas de parsing produit fiable pour l’instant
       })
     }
 
-    // 🔹 ELVACENTER
+    // ✅ ELVACENTER
     if (supplier.name === 'Elvacenter') {
-      try {
-        const searchUrl = `https://shop.elvacenter.com/?s=${encodeURIComponent(
-          q
-        )}&post_type=product`
+      const searchUrl = `https://shop.elvacenter.com/?s=${encodeURIComponent(
+        q
+      )}&post_type=product`
 
+      try {
         const response = await fetch(searchUrl)
         const html = await response.text()
 
-        // tentative simple d’extraction (safe)
         const imageMatch = html.match(/<img[^>]+src="([^"]+)"/)
-        const titleMatch = html.match(/class="woocommerce-loop-product__title">([^<]+)/)
+        const titleMatch = html.match(
+          /class="woocommerce-loop-product__title">([^<]+)</
+        )
 
         results.push({
           supplier: 'Elvacenter',
-          searchQuery: q,
-          productRef: q, // temporaire → amélioré au parsing V2
+          searchedValue: q,
           title: titleMatch?.[1],
           image: imageMatch?.[1],
           link: searchUrl
         })
-      } catch (e) {
+      } catch {
         results.push({
           supplier: 'Elvacenter',
-          searchQuery: q,
-          link: `https://shop.elvacenter.com/?s=${encodeURIComponent(q)}`
+          searchedValue: q,
+          link: searchUrl
         })
       }
     }
