@@ -21,61 +21,40 @@ export default async function handler(
   const results: SupplierResult[] = []
 
   /* =====================
-     🔹 SODIMAS (REAL SCRAPING)
+     🔹 SODIMAS — META PARSING (GOOGLE STYLE)
      ===================== */
   try {
     const searchUrl = `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`
     const html = await fetch(searchUrl).then(r => r.text())
     const $ = cheerio.load(html)
 
-    let found: SupplierResult | null = null
+    const title =
+      $('meta[property="og:title"]').attr('content') ||
+      $('title').text().trim() ||
+      null
 
-    $('.product-item').each((_, el) => {
-      if (found) return
+    const description =
+      $('meta[name="description"]').attr('content') ||
+      null
 
-      const title = $(el).find('.product-item-link').text().trim()
-      const link = $(el).find('.product-item-link').attr('href') || ''
-      const reference = $(el).find('.sku').text().trim() || null
-      const image =
-        $(el).find('img').attr('src') ||
-        $(el).find('img').attr('data-src') ||
-        null
+    const image =
+      $('meta[property="og:image"]').attr('content') ||
+      null
 
-      if (
-        title.toLowerCase().includes(q.toLowerCase()) ||
-        reference?.toLowerCase().includes(q.toLowerCase())
-      ) {
-        found = {
-          supplier: 'Sodimas',
-          title,
-          description: title,
-          reference,
-          image: image?.startsWith('http')
-            ? image
-            : image
-            ? `https://my.sodimas.com${image}`
-            : null,
-          fallbackImage:
-            'https://my.sodimas.com/home/assets/img/com/logo.png',
-          link: link.startsWith('http')
-            ? link
-            : `https://my.sodimas.com${link}`,
-        }
-      }
+    // extraction référence depuis titre ou URL
+    const refMatch =
+      title?.match(/[A-Z]{2,}\d{2,}/i) ||
+      searchUrl.match(/[A-Z]{2,}\d{2,}/i)
+
+    results.push({
+      supplier: 'Sodimas',
+      title,
+      description,
+      reference: refMatch ? refMatch[0] : null,
+      image,
+      fallbackImage: 'https://my.sodimas.com/home/assets/img/com/logo.png',
+      link: searchUrl,
     })
-
-    results.push(
-      found ?? {
-        supplier: 'Sodimas',
-        title: null,
-        description: null,
-        reference: null,
-        image: null,
-        fallbackImage:
-          'https://my.sodimas.com/home/assets/img/com/logo.png',
-        link: searchUrl,
-      }
-    )
   } catch {
     results.push({
       supplier: 'Sodimas',
@@ -83,25 +62,76 @@ export default async function handler(
       description: null,
       reference: null,
       image: null,
-      fallbackImage:
-        'https://my.sodimas.com/home/assets/img/com/logo.png',
+      fallbackImage: 'https://my.sodimas.com/home/assets/img/com/logo.png',
       link: `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`,
     })
   }
 
   /* =====================
-     🔹 ELVACENTER (SAFE MODE)
+     🔹 ELVACENTER — GRID PARSING (SAFE)
      ===================== */
-  results.push({
-    supplier: 'Elvacenter',
-    title: null,
-    description: null,
-    reference: null,
-    image: null,
-    fallbackImage:
-      'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
-    link: `https://shop.elvacenter.com/#/dfclassic/query=${encodeURIComponent(q)}`,
-  })
+  try {
+    const searchUrl = `https://shop.elvacenter.com/#/dfclassic/query=${encodeURIComponent(q)}`
+    const html = await fetch(searchUrl).then(r => r.text())
+    const $ = cheerio.load(html)
+
+    let match: SupplierResult | null = null
+
+    $('.product-grid-item').each((_, el) => {
+      if (match) return
+
+      const title = $(el).find('.product-title').text().trim()
+      const link = $(el).find('a').attr('href') || ''
+      const image =
+        $(el).find('img').attr('src') ||
+        $(el).find('img').attr('data-src') ||
+        null
+
+      if (
+        title.toLowerCase().includes(q.toLowerCase()) ||
+        link.toLowerCase().includes(q.toLowerCase())
+      ) {
+        const refMatch = title.match(/[A-Z]{2,}\d{2,}/i)
+
+        match = {
+          supplier: 'Elvacenter',
+          title,
+          description: title,
+          reference: refMatch ? refMatch[0] : null,
+          image,
+          fallbackImage:
+            'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
+          link: link.startsWith('http')
+            ? link
+            : `https://shop.elvacenter.com${link}`,
+        }
+      }
+    })
+
+    results.push(
+      match ?? {
+        supplier: 'Elvacenter',
+        title: null,
+        description: null,
+        reference: null,
+        image: null,
+        fallbackImage:
+          'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
+        link: searchUrl,
+      }
+    )
+  } catch {
+    results.push({
+      supplier: 'Elvacenter',
+      title: null,
+      description: null,
+      reference: null,
+      image: null,
+      fallbackImage:
+        'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
+      link: `https://shop.elvacenter.com/#/dfclassic/query=${encodeURIComponent(q)}`,
+    })
+  }
 
   return res.status(200).json(results)
 }
