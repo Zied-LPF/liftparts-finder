@@ -1,18 +1,15 @@
 import { useState } from 'react'
-import Link from 'next/link'
 
-type Part = {
-  id: string
-  name: string
-  reference: string
-  brand?: string
-  category?: string
-  notes?: string
+type SupplierResult = {
+  supplier: string
+  title: string
+  image?: string
+  link: string
 }
 
 export default function Home() {
   const [query, setQuery] = useState('')
-  const [parts, setParts] = useState<Part[]>([])
+  const [results, setResults] = useState<SupplierResult[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
 
@@ -22,10 +19,12 @@ export default function Home() {
     setLoading(true)
     setSearched(true)
 
-    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+    const res = await fetch(
+      `/api/search-suppliers?q=${encodeURIComponent(query)}`
+    )
     const data = await res.json()
 
-    setParts(Array.isArray(data) ? data : [])
+    setResults(Array.isArray(data) ? data : [])
     setLoading(false)
   }
 
@@ -81,78 +80,83 @@ export default function Home() {
 
       {loading && <p>Recherche en cours…</p>}
 
-      {!loading && searched && parts.length === 0 && (
-        <p style={{ color: '#666' }}>Aucune pièce trouvée</p>
+      {!loading && searched && results.length === 0 && (
+        <p style={{ color: '#666' }}>Aucun résultat fournisseur</p>
       )}
 
-      {!loading && parts.length > 0 && (
-        <div style={{ maxWidth: 900 }}>
-          {parts.map((part) => (
-            <Link
-              key={part.id}
-              href={`/parts/${part.id}`}
-              style={{ textDecoration: 'none', color: 'inherit' }}
+      {!loading && results.length > 0 && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: 16,
+            maxWidth: 1000,
+          }}
+        >
+          {results.map((r) => (
+            <div
+              key={r.supplier}
+              style={{
+                background: '#fff',
+                borderRadius: 10,
+                padding: 16,
+                border: '1px solid #ddd',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
             >
+              <strong style={{ marginBottom: 8 }}>
+                {r.supplier}
+              </strong>
+
               <div
                 style={{
-                  background: '#fff',
-                  border: '1px solid #ddd',
-                  borderRadius: 8,
-                  padding: 16,
+                  height: 180,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   marginBottom: 12,
-                  transition: 'box-shadow 0.2s',
                 }}
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'baseline',
-                    marginBottom: 6,
-                  }}
-                >
-                  <strong style={{ fontSize: 16 }}>
-                    {part.name}
-                  </strong>
-                  <span
+                {r.image ? (
+                  <img
+                    src={r.image}
+                    alt={r.title}
                     style={{
-                      fontSize: 13,
-                      color: '#666',
-                      fontFamily: 'monospace',
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain',
                     }}
-                  >
-                    {part.reference}
+                  />
+                ) : (
+                  <span style={{ fontSize: 12, color: '#999' }}>
+                    Aucune image
                   </span>
-                </div>
-
-                {part.brand && (
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      background: '#eef2f6',
-                      padding: '4px 10px',
-                      borderRadius: 12,
-                      fontSize: 12,
-                      marginBottom: 6,
-                    }}
-                  >
-                    {part.brand}
-                  </span>
-                )}
-
-                {part.notes && (
-                  <p
-                    style={{
-                      marginTop: 8,
-                      fontSize: 13,
-                      color: '#333',
-                    }}
-                  >
-                    {part.notes}
-                  </p>
                 )}
               </div>
-            </Link>
+
+              <div style={{ flexGrow: 1 }}>
+                <p style={{ fontSize: 14 }}>{r.title}</p>
+              </div>
+
+              <a
+                href={r.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  marginTop: 12,
+                  textAlign: 'center',
+                  padding: '10px 12px',
+                  borderRadius: 6,
+                  background: '#0070f3',
+                  color: '#fff',
+                  textDecoration: 'none',
+                  fontSize: 14,
+                }}
+              >
+                Voir chez {r.supplier}
+              </a>
+            </div>
           ))}
         </div>
       )}
