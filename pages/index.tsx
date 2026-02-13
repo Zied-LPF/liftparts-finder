@@ -3,7 +3,10 @@ import { useState } from 'react'
 type SupplierResult = {
   supplier: string
   title: string | null
+  description: string | null
+  reference: string | null
   image: string | null
+  fallbackImage: string
   link: string
 }
 
@@ -14,27 +17,22 @@ export default function Home() {
 
   const runSearch = async () => {
     if (!query.trim()) return
-
     setLoading(true)
-    const res = await fetch(
-      `/api/search-suppliers?q=${encodeURIComponent(query)}`
-    )
-    const data = await res.json()
-    setResults(Array.isArray(data) ? data : [])
+    const res = await fetch(`/api/search-suppliers?q=${encodeURIComponent(query)}`)
+    setResults(await res.json())
     setLoading(false)
   }
 
   return (
     <main style={{ padding: 32, background: '#f4f6f8', minHeight: '100vh' }}>
-      <h1 style={{ marginBottom: 24 }}>🔧 LiftParts Finder</h1>
+      <h1>🔧 LiftParts Finder</h1>
 
-      {/* Recherche */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 32 }}>
+      <div style={{ display: 'flex', gap: 12, margin: '24px 0' }}>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && runSearch()}
-          placeholder="Référence pièce (ex: KM846291G02)"
+          placeholder="Référence pièce"
           style={{ flex: 1, padding: 12 }}
         />
         <button onClick={runSearch}>Rechercher</button>
@@ -42,87 +40,55 @@ export default function Home() {
 
       {loading && <p>Recherche en cours…</p>}
 
-      {!loading && results.length > 0 && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: 24,
-          }}
-        >
-          {results.map((r) => (
-            <div
-              key={r.supplier}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 24 }}>
+        {results.map((r) => (
+          <div key={r.supplier} style={{ background: '#fff', padding: 20, borderRadius: 8 }}>
+            <h3>{r.supplier}</h3>
+
+            <div style={{ height: 180, border: '1px solid #ddd', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <img
+                src={r.image ?? r.fallbackImage}
+                alt={r.title ?? r.supplier}
+                style={{ maxHeight: '100%', maxWidth: '100%' }}
+              />
+            </div>
+
+            <strong>{r.title ?? 'Résultats disponibles chez ce fournisseur'}</strong>
+
+            {r.description && (
+              <p style={{ fontSize: 13, color: '#555' }}>{r.description}</p>
+            )}
+
+            {r.reference && (
+              <div style={{ fontSize: 12, fontFamily: 'monospace', color: '#666' }}>
+                Référence : {r.reference}
+              </div>
+            )}
+
+            <div style={{ fontSize: 12, marginTop: 4, color: '#666' }}>
+              Recherche : {query}
+            </div>
+
+            <a
+              href={r.link}
+              target="_blank"
+              rel="noopener noreferrer"
               style={{
-                background: '#fff',
-                borderRadius: 8,
-                padding: 20,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 12,
+                display: 'block',
+                marginTop: 12,
+                background: '#0d6efd',
+                color: '#fff',
+                textAlign: 'center',
+                padding: 10,
+                borderRadius: 6,
+                textDecoration: 'none',
               }}
             >
-              <h3>{r.supplier}</h3>
-
-              {/* Image */}
-              <div
-                style={{
-                  height: 180,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '1px solid #ddd',
-                }}
-              >
-                {r.image ? (
-                  <img
-                    src={r.image}
-                    alt={r.title ?? r.supplier}
-                    style={{ maxHeight: '100%', maxWidth: '100%' }}
-                  />
-                ) : (
-                  <span style={{ color: '#888' }}>Aucune image</span>
-                )}
-              </div>
-
-              {/* Texte */}
-              <div>
-                <strong>
-                  {r.title ?? 'Résultats disponibles chez ce fournisseur'}
-                </strong>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: '#666',
-                    marginTop: 4,
-                    fontFamily: 'monospace',
-                  }}
-                >
-                  Recherche : {query}
-                </div>
-              </div>
-
-              {/* Lien */}
-              <a
-                href={r.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  marginTop: 'auto',
-                  textAlign: 'center',
-                  padding: 12,
-                  background: '#0d6efd',
-                  color: '#fff',
-                  borderRadius: 6,
-                  textDecoration: 'none',
-                }}
-              >
-                Voir chez {r.supplier}
-              </a>
-            </div>
-          ))}
-        </div>
-      )}
+              Voir chez {r.supplier}
+            </a>
+          </div>
+        ))}
+      </div>
     </main>
   )
 }
