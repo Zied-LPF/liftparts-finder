@@ -11,155 +11,134 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SupplierResult[]>([])
   const [loading, setLoading] = useState(false)
-  const [searched, setSearched] = useState(false)
 
-  const runSearch = async () => {
+  const search = async () => {
     if (!query.trim()) return
-
     setLoading(true)
-    setSearched(true)
 
-    const res = await fetch(
-      `/api/search-suppliers?q=${encodeURIComponent(query)}`
-    )
-    const data = await res.json()
+    try {
+      const res = await fetch(`/api/search-suppliers?q=${encodeURIComponent(query)}`)
+      const data = await res.json()
+      setResults(Array.isArray(data) ? data : [])
+    } catch (e) {
+      console.error(e)
+      setResults([])
+    }
 
-    setResults(Array.isArray(data) ? data : [])
     setLoading(false)
   }
 
   return (
-    <main
-      style={{
-        padding: 32,
-        fontFamily: 'Arial, sans-serif',
-        background: '#f4f6f8',
-        minHeight: '100vh',
-      }}
-    >
-      <h1 style={{ marginBottom: 24, fontSize: 26 }}>
+    <main style={{ padding: 24, background: '#f4f6f8', minHeight: '100vh' }}>
+      <h1 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         🔧 LiftParts Finder
       </h1>
 
-      {/* Recherche */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 12,
-          marginBottom: 28,
-          maxWidth: 640,
-        }}
-      >
+      {/* SEARCH */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
         <input
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && runSearch()}
-          placeholder="Référence ou mot-clé (ex: contact, SOD-LOCK…)"
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && search()}
+          placeholder="Référence ou mot-clé"
           style={{
             flex: 1,
-            padding: '12px 14px',
-            fontSize: 15,
-            borderRadius: 6,
+            padding: 10,
+            fontSize: 16,
+            borderRadius: 4,
             border: '1px solid #ccc',
           }}
         />
         <button
-          onClick={runSearch}
+          onClick={search}
           style={{
-            padding: '12px 18px',
-            fontSize: 14,
+            padding: '10px 16px',
+            fontSize: 16,
+            borderRadius: 4,
             cursor: 'pointer',
-            borderRadius: 6,
-            border: '1px solid #888',
-            background: '#fff',
           }}
         >
           Rechercher
         </button>
       </div>
 
+      {/* RESULTS */}
       {loading && <p>Recherche en cours…</p>}
 
-      {!loading && searched && results.length === 0 && (
-        <p style={{ color: '#666' }}>Aucun résultat fournisseur</p>
-      )}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 20,
+        }}
+      >
+        {results.map((r, idx) => (
+          <div
+            key={idx}
+            style={{
+              background: '#fff',
+              padding: 16,
+              borderRadius: 6,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+            }}
+          >
+            <h3>{r.supplier}</h3>
 
-      {!loading && results.length > 0 && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: 16,
-            maxWidth: 1000,
-          }}
-        >
-          {results.map((r) => (
+            {/* IMAGE */}
             <div
-              key={r.supplier}
               style={{
-                background: '#fff',
-                borderRadius: 10,
-                padding: 16,
+                width: '100%',
+                height: 200,
                 border: '1px solid #ddd',
                 display: 'flex',
-                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#fafafa',
               }}
             >
-              <strong style={{ marginBottom: 8 }}>
-                {r.supplier}
-              </strong>
-
-              <div
-                style={{
-                  height: 180,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: 12,
-                }}
-              >
-                {r.image ? (
-                  <img
-                    src={r.image}
-                    alt={r.title}
-                    style={{
-                      maxWidth: '100%',
-                      maxHeight: '100%',
-                      objectFit: 'contain',
-                    }}
-                  />
-                ) : (
-                  <span style={{ fontSize: 12, color: '#999' }}>
-                    Aucune image
-                  </span>
-                )}
-              </div>
-
-              <div style={{ flexGrow: 1 }}>
-                <p style={{ fontSize: 14 }}>{r.title}</p>
-              </div>
-
-              <a
-                href={r.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  marginTop: 12,
-                  textAlign: 'center',
-                  padding: '10px 12px',
-                  borderRadius: 6,
-                  background: '#0070f3',
-                  color: '#fff',
-                  textDecoration: 'none',
-                  fontSize: 14,
-                }}
-              >
-                Voir chez {r.supplier}
-              </a>
+              {r.image ? (
+                <img
+                  src={r.image}
+                  alt={r.title}
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain',
+                  }}
+                />
+              ) : (
+                <span style={{ fontSize: 12, color: '#888' }}>
+                  Aucune image
+                </span>
+              )}
             </div>
-          ))}
-        </div>
-      )}
+
+            {/* TITLE */}
+            <div style={{ flex: 1 }}>
+              <strong>{r.title}</strong>
+            </div>
+
+            {/* LINK */}
+            <a
+              href={r.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                textAlign: 'center',
+                background: '#0070f3',
+                color: '#fff',
+                padding: 10,
+                borderRadius: 4,
+                textDecoration: 'none',
+              }}
+            >
+              Voir chez {r.supplier}
+            </a>
+          </div>
+        ))}
+      </div>
     </main>
   )
 }
