@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { suppliers } from '../../lib/suppliers'
+import * as cheerio from 'cheerio'
 
-type SupplierResult = {
+type Result = {
   supplier: string
   title: string
   image?: string
@@ -10,117 +10,81 @@ type SupplierResult = {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse<Result[]>
 ) {
-  const query = (req.query.q as string)?.trim()
+  const q = String(req.query.q || '').trim()
+  if (!q) return res.status(200).json([])
 
-  if (!query) {
-    return res.status(400).json({ error: 'Query manquante' })
-  }
+  const results: Result[] = []
 
-  const results: SupplierResult[] = []
+  /* =========================
+     SODIMAS
+  ========================== */
+  try {
+    const url = `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`
+    const html = await fetch(url).then(r => r.text())
+    const $ = cheerio.load(html)
 
-  const activeSuppliers = suppliers.filter(
-    s => s.name === 'Sodimas' || s.name === 'Elvacenter'
-  )
+    const firstLink = $('a[href*="/produit"]').first()
+    const link = firstLink.attr('href')
 
-  for (const supplier of activeSuppliers) {
-    try {
-      const searchUrl = `${supplier.baseUrl}${encodeURIComponent(query)}`
+    if (link) {
+      const productPage = await fetch(`https://my.sodimas.com${link}`).then(r => r.text())
+      const $$ = cheerio.load(productPage)
 
-      const response = await fetch(searchUrl, {
-        headers: {
-          'User-Agent': 'LiftPartsFinder/2.0',
-          'Accept': 'text/html',
-        },
-      })
+      const title =
+        $$('h1').first().text().trim() || q
 
-      if (!response.ok) {
-        console.warn(`HTTP ${response.status} chez ${supplier.name}`)
-        continue
-      }
+      let image =
+        $$('img[src*="produit"]').attr('src') ||
+        $$('img[src*="catalog"]').attr('src')
 
-      const html = await response.text()
-
-      let title = query
-      let image: string | undefined
-      let link = searchUrl
-
-      /* =========================
-         🟢 SODIMAS — PARSING AMÉLIORÉ
-         ========================= */
-      if (supplier.name === 'Sodimas') {
-        // 1️⃣ Lien vers la première fiche produit
-        const linkMatch = html.match(
-          /href="(\/fr\/produit\/[^"]+)"/i
-        )
-        if (linkMatch) {
-          link = `https://my.sodimas.com${linkMatch[1]}`
-        }
-
-        // 2️⃣ Image produit (on évite le logo)
-        const imgMatch = html.match(
-          /<img[^>]+src="([^"]+)"[^>]*class="[^"]*product[^"]*"/i
-        )
-        if (imgMatch && !imgMatch[1].includes('logo')) {
-          image = imgMatch[1].startsWith('http')
-            ? imgMatch[1]
-            : `https://my.sodimas.com${imgMatch[1]}`
-        }
-
-        // 3️⃣ Titre produit
-        const titleMatch = html.match(
-          /<h3[^>]*>(.*?)<\/h3>/i
-        )
-        if (titleMatch) {
-          title = titleMatch[1]
-            .replace(/<[^>]+>/g, '')
-            .trim()
-        }
-      }
-
-      /* =========================
-         🟢 ELVACENTER — PARSING AMÉLIORÉ
-         ========================= */
-      if (supplier.name === 'Elvacenter') {
-        // 1️⃣ Lien produit (SPA)
-        const linkMatch = html.match(
-          /href="(#\/product\/[^"]+)"/i
-        )
-        if (linkMatch) {
-          link = `https://shop.elvacenter.com/${linkMatch[1]}`
-        }
-
-        // 2️⃣ Image produit (data-src ou src)
-        const imgMatch = html.match(
-          /<img[^>]+(data-src|src)="([^"]+)"/i
-        )
-        if (imgMatch) {
-          image = imgMatch[2].startsWith('http')
-            ? imgMatch[2]
-            : `https://shop.elvacenter.com${imgMatch[2]}`
-        }
-
-        // 3️⃣ Titre produit
-        const titleMatch = html.match(
-          /<h2[^>]*>(.*?)<\/h2>/i
-        )
-        if (titleMatch) {
-          title = titleMatch[1]
-            .replace(/<[^>]+>/g, '')
-            .trim()
-        }
+      if (image && image.startsWith('/')) {
+        image = `https://my.sodimas.com${image}`
       }
 
       results.push({
-        supplier: supplier.name,
+        supplier: 'Sodimas',
+        title,
+        image,
+        link: `https://my.sodimas.com${link}`,
+      })
+    }
+  } catch (e) {
+    console.error('Sodimas error', e)
+  }
+
+  /* =========================
+     ELVACENTER
+  ========================== */
+  try {
+    const url = `https://shop.elvacenter.com/#/dfclassic/query=${encodeURIComponent(q)}`
+    const html = await fetch(url).then(r => r.text())
+    const $ = cheerio.load(html)
+
+    const product = $('.product, li.product').first()
+
+    if (product.length) {
+      const title =
+        product.find('h2, h3, .woocommerce-loop-product__title').first().text().trim() || q
+
+      let image =
+        product.find('img.wp-post-image').attr('src') ||
+        product.find('img').first().attr('src')
+
+      const link =
+        product.find('a').first().attr('href') ||
+        url
+
+      results.push({
+        supplier: 'Elvacenter',
         title,
         image,
         link,
       })
-    } catch (err) {
-      console.error(`Erreur fournisseur ${supplier.name}`, err)
     }
+  } catch (e) {
+    console.error('Elvacenter error', e)
   }
 
   return res.status(200).json(results)
