@@ -44,29 +44,71 @@ export default async function handler(
 
       let title = query
       let image: string | undefined
+      let link = searchUrl
 
-      // 🟢 SODIMAS
+      /* =========================
+         🟢 SODIMAS — PARSING AMÉLIORÉ
+         ========================= */
       if (supplier.name === 'Sodimas') {
-        const imgMatch = html.match(/<img[^>]+src="([^"]+)"/i)
-        if (imgMatch) {
+        // 1️⃣ Lien vers la première fiche produit
+        const linkMatch = html.match(
+          /href="(\/fr\/produit\/[^"]+)"/i
+        )
+        if (linkMatch) {
+          link = `https://my.sodimas.com${linkMatch[1]}`
+        }
+
+        // 2️⃣ Image produit (on évite le logo)
+        const imgMatch = html.match(
+          /<img[^>]+src="([^"]+)"[^>]*class="[^"]*product[^"]*"/i
+        )
+        if (imgMatch && !imgMatch[1].includes('logo')) {
           image = imgMatch[1].startsWith('http')
             ? imgMatch[1]
             : `https://my.sodimas.com${imgMatch[1]}`
         }
 
-        const titleMatch = html.match(/<h1[^>]*>(.*?)<\/h1>/i)
+        // 3️⃣ Titre produit
+        const titleMatch = html.match(
+          /<h3[^>]*>(.*?)<\/h3>/i
+        )
         if (titleMatch) {
-          title = titleMatch[1].replace(/<[^>]+>/g, '').trim()
+          title = titleMatch[1]
+            .replace(/<[^>]+>/g, '')
+            .trim()
         }
       }
 
-      // 🟢 ELVACENTER
+      /* =========================
+         🟢 ELVACENTER — PARSING AMÉLIORÉ
+         ========================= */
       if (supplier.name === 'Elvacenter') {
-        const imgMatch = html.match(/<img[^>]+src="([^"]+)"/i)
+        // 1️⃣ Lien produit (SPA)
+        const linkMatch = html.match(
+          /href="(#\/product\/[^"]+)"/i
+        )
+        if (linkMatch) {
+          link = `https://shop.elvacenter.com/${linkMatch[1]}`
+        }
+
+        // 2️⃣ Image produit (data-src ou src)
+        const imgMatch = html.match(
+          /<img[^>]+(data-src|src)="([^"]+)"/i
+        )
         if (imgMatch) {
-          image = imgMatch[1].startsWith('http')
-            ? imgMatch[1]
-            : `https://shop.elvacenter.com${imgMatch[1]}`
+          image = imgMatch[2].startsWith('http')
+            ? imgMatch[2]
+            : `https://shop.elvacenter.com${imgMatch[2]}`
+        }
+
+        // 3️⃣ Titre produit
+        const titleMatch = html.match(
+          /<h2[^>]*>(.*?)<\/h2>/i
+        )
+        if (titleMatch) {
+          title = titleMatch[1]
+            .replace(/<[^>]+>/g, '')
+            .trim()
         }
       }
 
@@ -74,7 +116,7 @@ export default async function handler(
         supplier: supplier.name,
         title,
         image,
-        link: searchUrl,
+        link,
       })
     } catch (err) {
       console.error(`Erreur fournisseur ${supplier.name}`, err)
