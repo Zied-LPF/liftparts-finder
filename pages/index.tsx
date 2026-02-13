@@ -2,52 +2,99 @@ import { useState } from 'react'
 
 type Result = {
   supplier: string
-  title: string
-  reference: string
+  searchedValue: string
+  productRef?: string
+  title?: string
+  description?: string
   image?: string
   link: string
-  searched: string
 }
 
 export default function Home() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Result[]>([])
+  const [loading, setLoading] = useState(false)
 
   const search = async () => {
     if (!query.trim()) return
 
-    const res = await fetch(`/api/search-suppliers?q=${encodeURIComponent(query)}`)
-    const data = await res.json()
-    setResults(data)
+    setLoading(true)
+    setResults([])
+
+    try {
+      const res = await fetch(
+        `/api/search-suppliers?q=${encodeURIComponent(query)}`
+      )
+      const data = await res.json()
+      setResults(Array.isArray(data) ? data : [])
+    } catch (e) {
+      console.error('Search error', e)
+      setResults([])
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <main>
-      {/* VISUEL INCHANGÉ */}
+    <main style={{ padding: 24 }}>
+      <h1>🔧 LiftParts Finder</h1>
 
-      <div className="results">
-        {results.map((r) => (
-          <div key={r.supplier} className="card">
-            <h2>{r.supplier}</h2>
+      <div style={{ marginBottom: 20 }}>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Référence pièce"
+          style={{ width: 300, marginRight: 10 }}
+        />
+        <button onClick={search}>Rechercher</button>
+      </div>
 
-            {r.image && (
-              <img
-                src={r.image}
-                alt={r.title}
-                style={{ maxWidth: '100%', maxHeight: 160, objectFit: 'contain' }}
-              />
-            )}
+      {loading && <p>Recherche en cours…</p>}
 
-            <p><strong>Résultats disponibles chez ce fournisseur</strong></p>
-            <p><strong>Référence :</strong> {r.reference}</p>
-            <p><strong>Recherche :</strong> {r.searched}</p>
+      {results.map((r, i) => (
+        <div
+          key={i}
+          style={{
+            border: '1px solid #ddd',
+            padding: 16,
+            marginBottom: 16
+          }}
+        >
+          <h3>{r.supplier}</h3>
 
+          <p>
+            <strong>Recherche :</strong> {r.searchedValue}
+          </p>
+
+          {r.title && (
+            <p>
+              <strong>Produit :</strong> {r.title}
+            </p>
+          )}
+
+          {r.productRef && (
+            <p>
+              <strong>Référence fournisseur :</strong> {r.productRef}
+            </p>
+          )}
+
+          {r.image ? (
+            <img
+              src={r.image}
+              alt={r.title || r.supplier}
+              style={{ maxWidth: 200 }}
+            />
+          ) : (
+            <p>(Image fournisseur)</p>
+          )}
+
+          <div style={{ marginTop: 10 }}>
             <a href={r.link} target="_blank">
-              <button>Voir chez {r.supplier}</button>
+              Voir chez {r.supplier}
             </a>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </main>
   )
 }
