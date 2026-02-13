@@ -1,100 +1,94 @@
 import { useState } from 'react'
 
-type Result = {
+type SupplierResult = {
   supplier: string
-  searchedValue: string
-  productRef?: string
-  title?: string
-  description?: string
-  image?: string
+  title: string | null
+  description: string | null
+  reference: string | null
+  image: string | null
+  fallbackImage: string
   link: string
 }
 
 export default function Home() {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<Result[]>([])
+  const [results, setResults] = useState<SupplierResult[]>([])
   const [loading, setLoading] = useState(false)
 
-  const search = async () => {
+  const runSearch = async () => {
     if (!query.trim()) return
-
     setLoading(true)
-    setResults([])
-
-    try {
-      const res = await fetch(
-        `/api/search-suppliers?q=${encodeURIComponent(query)}`
-      )
-      const data = await res.json()
-      setResults(Array.isArray(data) ? data : [])
-    } catch (e) {
-      console.error('Search error', e)
-      setResults([])
-    } finally {
-      setLoading(false)
-    }
+    const res = await fetch(`/api/search-suppliers?q=${encodeURIComponent(query)}`)
+    setResults(await res.json())
+    setLoading(false)
   }
 
   return (
-    <main style={{ padding: 24 }}>
+    <main style={{ padding: 32, background: '#f4f6f8', minHeight: '100vh' }}>
       <h1>🔧 LiftParts Finder</h1>
 
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 12, margin: '24px 0' }}>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && runSearch()}
           placeholder="Référence pièce"
-          style={{ width: 300, marginRight: 10 }}
+          style={{ flex: 1, padding: 12 }}
         />
-        <button onClick={search}>Rechercher</button>
+        <button onClick={runSearch}>Rechercher</button>
       </div>
 
       {loading && <p>Recherche en cours…</p>}
 
-      {results.map((r, i) => (
-        <div
-          key={i}
-          style={{
-            border: '1px solid #ddd',
-            padding: 16,
-            marginBottom: 16
-          }}
-        >
-          <h3>{r.supplier}</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 24 }}>
+        {results.map((r) => (
+          <div key={r.supplier} style={{ background: '#fff', padding: 20, borderRadius: 8 }}>
+            <h3>{r.supplier}</h3>
 
-          <p>
-            <strong>Recherche :</strong> {r.searchedValue}
-          </p>
+            <div style={{ height: 180, border: '1px solid #ddd', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <img
+                src={r.image ?? r.fallbackImage}
+                alt={r.title ?? r.supplier}
+                style={{ maxHeight: '100%', maxWidth: '100%' }}
+              />
+            </div>
 
-          {r.title && (
-            <p>
-              <strong>Produit :</strong> {r.title}
-            </p>
-          )}
+            <strong>{r.title ?? 'Résultats disponibles chez ce fournisseur'}</strong>
 
-          {r.productRef && (
-            <p>
-              <strong>Référence fournisseur :</strong> {r.productRef}
-            </p>
-          )}
+            {r.description && (
+              <p style={{ fontSize: 13, color: '#555' }}>{r.description}</p>
+            )}
 
-          {r.image ? (
-            <img
-              src={r.image}
-              alt={r.title || r.supplier}
-              style={{ maxWidth: 200 }}
-            />
-          ) : (
-            <p>(Image fournisseur)</p>
-          )}
+            {r.reference && (
+              <div style={{ fontSize: 12, fontFamily: 'monospace', color: '#666' }}>
+                Référence : {r.reference}
+              </div>
+            )}
 
-          <div style={{ marginTop: 10 }}>
-            <a href={r.link} target="_blank">
+            <div style={{ fontSize: 12, marginTop: 4, color: '#666' }}>
+              Recherche : {query}
+            </div>
+
+            <a
+              href={r.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'block',
+                marginTop: 12,
+                background: '#0d6efd',
+                color: '#fff',
+                textAlign: 'center',
+                padding: 10,
+                borderRadius: 6,
+                textDecoration: 'none',
+              }}
+            >
               Voir chez {r.supplier}
             </a>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </main>
   )
 }
