@@ -3,18 +3,19 @@ import { suppliers } from '../../lib/suppliers'
 
 type SupplierResult = {
   supplier: string
-  title: string
-  reference: string
+  searchQuery: string
+  productRef?: string
+  title?: string
+  description?: string
   image?: string
   link: string
-  searched: string
 }
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<SupplierResult[]>
 ) {
-  const q = (req.query.q as string || '').trim()
+  const q = (req.query.q as string)?.trim()
 
   if (!q) {
     return res.status(200).json([])
@@ -23,25 +24,47 @@ export default async function handler(
   const results: SupplierResult[] = []
 
   for (const supplier of suppliers) {
-    try {
-      // ⚠️ ici on suppose que chaque supplier a déjà une logique interne
-      // qui retourne title / reference / image / link
-      const data = await supplier.search(q)
-
-      if (!data) continue
-
+    // 🔹 SODIMAS
+    if (supplier.name === 'Sodimas') {
       results.push({
-        supplier: supplier.name,
-        title: data.title,
-        reference: data.reference,        // ✅ référence réelle fournisseur
-        image: data.image || undefined,   // ✅ image réelle si dispo
-        link: data.link,
-        searched: q                        // ✅ ce que l’utilisateur a tapé
+        supplier: 'Sodimas',
+        searchQuery: q,
+        link: `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`
+        // Sodimas = pas de parsing produit fiable pour l’instant
       })
-    } catch (err) {
-      console.error(`Erreur fournisseur ${supplier.name}`, err)
+    }
+
+    // 🔹 ELVACENTER
+    if (supplier.name === 'Elvacenter') {
+      try {
+        const searchUrl = `https://shop.elvacenter.com/?s=${encodeURIComponent(
+          q
+        )}&post_type=product`
+
+        const response = await fetch(searchUrl)
+        const html = await response.text()
+
+        // tentative simple d’extraction (safe)
+        const imageMatch = html.match(/<img[^>]+src="([^"]+)"/)
+        const titleMatch = html.match(/class="woocommerce-loop-product__title">([^<]+)/)
+
+        results.push({
+          supplier: 'Elvacenter',
+          searchQuery: q,
+          productRef: q, // temporaire → amélioré au parsing V2
+          title: titleMatch?.[1],
+          image: imageMatch?.[1],
+          link: searchUrl
+        })
+      } catch (e) {
+        results.push({
+          supplier: 'Elvacenter',
+          searchQuery: q,
+          link: `https://shop.elvacenter.com/?s=${encodeURIComponent(q)}`
+        })
+      }
     }
   }
 
-  res.status(200).json(results)
+  return res.status(200).json(results)
 }
