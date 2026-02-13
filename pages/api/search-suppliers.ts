@@ -4,8 +4,11 @@ import * as cheerio from 'cheerio'
 type SupplierResult = {
   supplier: string
   title: string | null
+  description: string | null
+  reference: string | null
   image: string | null
   link: string
+  fallbackImage: string
 }
 
 export default async function handler(
@@ -13,35 +16,35 @@ export default async function handler(
   res: NextApiResponse
 ) {
   const q = (req.query.q as string)?.trim()
-
-  if (!q) {
-    return res.status(400).json({ error: 'Query manquante' })
-  }
+  if (!q) return res.status(400).json({ error: 'Query manquante' })
 
   const results: SupplierResult[] = []
 
-  /* ===========================
-     🔹 SODIMAS (MODE PRO)
-     =========================== */
+  /* =====================
+     🔹 SODIMAS (SAFE)
+     ===================== */
   results.push({
     supplier: 'Sodimas',
     title: null,
-    image: 'https://my.sodimas.com/home/assets/img/com/logo.png',
+    description: null,
+    reference: q,
+    image: null,
+    fallbackImage: 'https://my.sodimas.com/home/assets/img/com/logo.png',
     link: `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`,
   })
 
-  /* ===========================
-     🔹 ELVACENTER (MATCH EXACT)
-     =========================== */
+  /* =====================
+     🔹 ELVACENTER
+     ===================== */
   try {
     const searchUrl = `https://shop.elvacenter.com/#/dfclassic/query=${encodeURIComponent(q)}`
     const html = await fetch(searchUrl).then(r => r.text())
     const $ = cheerio.load(html)
 
-    let matchedProduct: SupplierResult | null = null
+    let match: SupplierResult | null = null
 
     $('.product-grid-item').each((_, el) => {
-      if (matchedProduct) return
+      if (match) return
 
       const title = $(el).find('.product-title').text().trim()
       const link = $(el).find('a').attr('href') || ''
@@ -50,16 +53,18 @@ export default async function handler(
         $(el).find('img').attr('data-src') ||
         null
 
-      const normalizedQ = q.toLowerCase()
-
       if (
-        title.toLowerCase().includes(normalizedQ) ||
-        link.toLowerCase().includes(normalizedQ)
+        title.toLowerCase().includes(q.toLowerCase()) ||
+        link.toLowerCase().includes(q.toLowerCase())
       ) {
-        matchedProduct = {
+        match = {
           supplier: 'Elvacenter',
           title,
+          description: title, // Elvacenter = titre descriptif
+          reference: q,
           image,
+          fallbackImage:
+            'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
           link: link.startsWith('http')
             ? link
             : `https://shop.elvacenter.com${link}`,
@@ -67,21 +72,27 @@ export default async function handler(
       }
     })
 
-    if (matchedProduct) {
-      results.push(matchedProduct)
-    } else {
-      results.push({
+    results.push(
+      match ?? {
         supplier: 'Elvacenter',
         title: null,
-        image: 'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
+        description: null,
+        reference: q,
+        image: null,
+        fallbackImage:
+          'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
         link: searchUrl,
-      })
-    }
-  } catch (err) {
+      }
+    )
+  } catch {
     results.push({
       supplier: 'Elvacenter',
       title: null,
-      image: 'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
+      description: null,
+      reference: q,
+      image: null,
+      fallbackImage:
+        'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
       link: `https://shop.elvacenter.com/#/dfclassic/query=${encodeURIComponent(q)}`,
     })
   }
