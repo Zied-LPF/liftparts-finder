@@ -11,18 +11,16 @@ type SupplierResult = {
   link: string
 }
 
-function scoreMatch(title: string, query: string) {
+function scoreMatch(text: string, query: string) {
   let score = 0
-  const normalizedTitle = title.toLowerCase()
-  const normalizedQuery = query.toLowerCase()
-  const compactTitle = normalizedTitle.replace(/\s/g, '')
-  const compactQuery = normalizedQuery.replace(/\s/g, '')
+  const t = text.toLowerCase()
+  const q = query.toLowerCase()
 
-  if (normalizedTitle.includes(normalizedQuery)) score += 5
-  if (compactTitle.includes(compactQuery)) score += 3
+  if (t.includes(q)) score += 5
+  if (t.replace(/\s/g, '').includes(q.replace(/\s/g, ''))) score += 3
 
-  normalizedQuery.split(' ').forEach((word) => {
-    if (normalizedTitle.includes(word)) score += 1
+  q.split(' ').forEach((word) => {
+    if (t.includes(word)) score += 1
   })
 
   return score
@@ -40,65 +38,67 @@ export default async function handler(
   const results: SupplierResult[] = []
 
   /* =========================================================
-     🔹 SODIMAS V2 (SCORING + PARSING SI POSSIBLE)
+     🔹 SODIMAS — PROXY API JSON OFFICIELLE
      ========================================================= */
   try {
-    const searchUrl = `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(
-      q
-    )}`
+    const apiUrl =
+      `https://my.sodimas.com/index.cfm?action=search.jsonList` +
+      `&filtrePrincipal=searchstring` +
+      `&filtrePrincipalValue=${encodeURIComponent(q)}` +
+      `&searchstring=${encodeURIComponent(q)}` +
+      `&start=0&length=50`
 
-    const searchHtml = await fetch(searchUrl).then((r) => r.text())
-    const $search = cheerio.load(searchHtml)
-
-    let bestMatch: { link: string; score: number } | null = null
-
-    $search('a').each((_, el) => {
-      const link = $search(el).attr('href')
-      const text = $search(el).text().trim()
-
-      if (!link || !text) return
-      if (!link.includes('/fr/')) return
-
-      const score = scoreMatch(text, q)
-
-      if (!bestMatch || score > bestMatch.score) {
-        bestMatch = { link, score }
-      }
+    const response = await fetch(apiUrl, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      },
     })
 
-    if (!bestMatch || bestMatch.score === 0) {
-      throw new Error('Pas de produit précis')
+    const data = await response.json()
+
+    if (!data.data || data.data.length === 0) {
+      throw new Error('Aucun produit')
     }
 
-    const productUrl = bestMatch.link.startsWith('http')
-      ? bestMatch.link
-      : `https://my.sodimas.com${bestMatch.link}`
+    let best = null
+    let bestScore = 0
 
-    const productHtml = await fetch(productUrl).then((r) => r.text())
-    const $product = cheerio.load(productHtml)
+    for (const item of data.data) {
+      const combinedText = `${item.ref} ${item.designation}`
+      const score = scoreMatch(combinedText, q)
 
-    const title =
-      $product('h1').first().text().trim() || bestMatch.link
+      if (score > bestScore) {
+        best = item
+        bestScore = score
+      }
+    }
 
-    const image =
-      $product('img').first().attr('src') || null
+    if (!best) {
+      throw new Error('Pas de match pertinent')
+    }
+
+    const image = best.photo
+      ? `https://my.sodimas.com/${best.photo}`
+      : null
+
+    const productLink = `https://my.sodimas.com/fr/produit?ref=${best.ref}`
 
     results.push({
       supplier: 'Sodimas',
-      title,
-      description: title,
-      reference: null,
+      title: best.designation || best.ref,
+      description: best.designation,
+      reference: best.ref,
       image,
       fallbackImage:
         'https://my.sodimas.com/home/assets/img/com/logo.png',
-      link: productUrl,
+      link: productLink,
     })
   } catch {
     results.push({
       supplier: 'Sodimas',
       title: 'Catalogue officiel Sodimas',
       description:
-        'Recherche dans le catalogue Sodimas. Accès direct aux fiches produits.',
+        'Recherche dans le catalogue Sodimas.',
       reference: null,
       image: null,
       fallbackImage:
@@ -110,7 +110,7 @@ export default async function handler(
   }
 
   /* =========================================================
-     🔹 ELVACENTER V2 (STABLE)
+     🔹 ELVACENTER (inchangé V2 stable)
      ========================================================= */
   try {
     const searchUrl = `https://shop.elvacenter.com/?s=${encodeURIComponent(
@@ -134,9 +134,7 @@ export default async function handler(
       }
     })
 
-    if (!bestMatch || bestMatch.score === 0) {
-      throw new Error('Pas trouvé')
-    }
+    if (!bestMatch) throw new Error()
 
     const productHtml = await fetch(bestMatch.link).then((r) => r.text())
     const $product = cheerio.load(productHtml)
@@ -163,8 +161,7 @@ export default async function handler(
     results.push({
       supplier: 'Elvacenter',
       title: 'Catalogue Elvacenter',
-      description:
-        'Recherche dans le catalogue Elvacenter.',
+      description: 'Recherche dans le catalogue Elvacenter.',
       reference: null,
       image: null,
       fallbackImage:
