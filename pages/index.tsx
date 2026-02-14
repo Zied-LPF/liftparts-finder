@@ -1,87 +1,132 @@
-import { useState } from "react"
+import { useState } from 'react'
+
+type SupplierResult = {
+  supplier: string
+  title: string | null
+  description: string | null
+  reference: string | null
+  image: string | null
+  fallbackImage: string
+  link: string
+}
 
 export default function Home() {
-  const [query, setQuery] = useState("")
-  const [results, setResults] = useState<any[]>([])
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<SupplierResult[]>([])
+  const [loading, setLoading] = useState(false)
+  const [lastSearch, setLastSearch] = useState('')
 
-  const handleSearch = async () => {
-    if (!query) return
+  const runSearch = async () => {
+    if (!query.trim()) return
+    setLoading(true)
+    setLastSearch(query.trim())
 
-    const res = await fetch(`/api/search?q=${query}`)
-    const data = await res.json()
-    setResults(data)
+    const res = await fetch(
+      `/api/search-suppliers?q=${encodeURIComponent(query.trim())}`
+    )
+    setResults(await res.json())
+    setLoading(false)
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 text-center">
-          LiftParts Finder
-        </h1>
+    <main style={{ padding: 32, background: '#f4f6f8', minHeight: '100vh' }}>
+      <h1>🔧 LiftParts Finder</h1>
 
-        {/* Barre de recherche */}
-        <div className="flex gap-2 mb-8">
-          <input
-            type="text"
-            placeholder="Rechercher une pièce..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleSearch()
-            }}
-            className="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            onClick={handleSearch}
-            className="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700 transition"
-          >
-            Rechercher
-          </button>
-        </div>
+      <div style={{ display: 'flex', gap: 12, margin: '24px 0' }}>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && runSearch()}
+          placeholder="Référence pièce"
+          style={{ flex: 1, padding: 12 }}
+        />
+        <button onClick={runSearch}>Rechercher</button>
+      </div>
 
-        {/* Résultats */}
-        <div>
-          {results.length === 0 && (
-            <p className="text-center text-gray-500">
-              Aucun résultat pour le moment.
-            </p>
-          )}
+      {loading && <p>Recherche en cours…</p>}
 
-          {results.map((result, index) => (
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))',
+          gap: 24,
+        }}
+      >
+        {results.map((r) => {
+          const imageToShow = r.image || r.fallbackImage
+
+          return (
             <div
-              key={index}
-              className="bg-white shadow-md rounded-xl p-5 mb-4 border hover:shadow-lg transition"
+              key={r.supplier}
+              style={{ background: '#fff', padding: 20, borderRadius: 8 }}
             >
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="text-lg font-semibold">
-                  {result.supplier}
-                </h2>
+              <h3>{r.supplier}</h3>
+
+              <div
+                style={{
+                  height: 180,
+                  border: '1px solid #ddd',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 12,
+                }}
+              >
+                <img
+                  src={imageToShow}
+                  alt={r.title ?? r.supplier}
+                  style={{ maxHeight: '100%', maxWidth: '100%' }}
+                />
               </div>
 
-              <p className="text-gray-900 font-medium mb-1">
-                {result.name}
-              </p>
+              <strong>
+                {r.title ?? 'Résultats disponibles chez ce fournisseur'}
+              </strong>
 
-              {result.brand && (
-                <span className="inline-block bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full mb-3">
-                  {result.brand}
-                </span>
+              {r.description && (
+                <p style={{ fontSize: 13, color: '#555', marginTop: 6 }}>
+                  {r.description}
+                </p>
               )}
 
-              <div>
-                <a
-                  href={result.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+              {r.reference && (
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                    color: '#666',
+                    marginTop: 6,
+                  }}
                 >
-                  Voir chez fournisseur
-                </a>
+                  Référence fournisseur : {r.reference}
+                </div>
+              )}
+
+              <div style={{ fontSize: 12, marginTop: 4, color: '#666' }}>
+                Recherche : {lastSearch}
               </div>
+
+              <a
+                href={r.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'block',
+                  marginTop: 12,
+                  background: '#0d6efd',
+                  color: '#fff',
+                  textAlign: 'center',
+                  padding: 10,
+                  borderRadius: 6,
+                  textDecoration: 'none',
+                }}
+              >
+                Voir chez {r.supplier}
+              </a>
             </div>
-          ))}
-        </div>
+          )
+        })}
       </div>
-    </div>
+    </main>
   )
 }
