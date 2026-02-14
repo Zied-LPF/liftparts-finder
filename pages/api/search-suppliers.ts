@@ -26,6 +26,13 @@ function scoreMatch(text: string, query: string) {
   return score
 }
 
+function extractCookies(setCookieHeaders: string[] | undefined) {
+  if (!setCookieHeaders) return ''
+  return setCookieHeaders
+    .map((c) => c.split(';')[0])
+    .join('; ')
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -38,9 +45,26 @@ export default async function handler(
   const results: SupplierResult[] = []
 
   /* =========================================================
-     🔹 SODIMAS — PROXY API JSON ROBUSTE
+     🔹 SODIMAS — BOOTSTRAP SESSION + API JSON
      ========================================================= */
   try {
+    // 1️⃣ Bootstrap session
+    const initResponse = await fetch(
+      'https://my.sodimas.com/fr/recherche',
+      {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+        },
+      }
+    )
+
+    const rawCookies = initResponse.headers.get('set-cookie')
+    const cookieHeader = rawCookies
+      ? rawCookies.split(',').map((c) => c.split(';')[0]).join('; ')
+      : ''
+
+    // 2️⃣ Appel API avec cookies
     const apiUrl =
       `https://my.sodimas.com/index.cfm?action=search.jsonList` +
       `&filtrePrincipal=searchstring` +
@@ -57,8 +81,7 @@ export default async function handler(
         'X-Requested-With': 'XMLHttpRequest',
         'Referer': 'https://my.sodimas.com/fr/recherche',
         'Origin': 'https://my.sodimas.com',
-        'Accept-Language': 'fr-FR,fr;q=0.9',
-        'Connection': 'keep-alive'
+        'Cookie': cookieHeader,
       },
     })
 
@@ -107,7 +130,7 @@ export default async function handler(
       link: productLink,
     })
   } catch (error) {
-    console.error('Sodimas proxy error:', error)
+    console.error('Sodimas bootstrap error:', error)
 
     results.push({
       supplier: 'Sodimas',
@@ -124,7 +147,7 @@ export default async function handler(
   }
 
   /* =========================================================
-     🔹 ELVACENTER (V2 stable)
+     🔹 ELVACENTER (inchangé stable)
      ========================================================= */
   try {
     const searchUrl = `https://shop.elvacenter.com/?s=${encodeURIComponent(
