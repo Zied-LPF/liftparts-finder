@@ -13,30 +13,8 @@ type SupplierResult = {
   exactMatch: boolean
 }
 
-type Brand =
-  | 'Sodimas'
-  | 'Elvacenter'
-  | 'Hauer'
-  | 'Kone'
-  | 'MGTI'
-  | 'Sodica'
-  | null
-
 function normalize(str: string) {
   return str.toLowerCase().replace(/[\s\-_/]/g, '')
-}
-
-function detectBrandBoost(query: string): Brand {
-  const q = query.toLowerCase()
-
-  if (q.includes('sodimas')) return 'Sodimas'
-  if (q.includes('elvacenter')) return 'Elvacenter'
-  if (q.includes('hauer')) return 'Hauer'
-  if (q.includes('kone')) return 'Kone'
-  if (q.includes('mgti')) return 'MGTI'
-  if (q.includes('sodica')) return 'Sodica'
-
-  return null
 }
 
 function scoreMatch(text: string, query: string) {
@@ -55,7 +33,7 @@ function scoreMatch(text: string, query: string) {
   if (t.includes(q)) score += 10
 
   query.split(' ').forEach((word) => {
-    if (t.includes(normalize(word))) score += 2
+    if (t.includes(normalize(word))) score += 3
   })
 
   return { score, exactMatch }
@@ -66,79 +44,9 @@ export default async function handler(
   res: NextApiResponse
 ) {
   const q = (req.query.q as string)?.trim()
-  if (!q) {
-    return res.status(400).json({ error: 'Query manquante' })
-  }
+  if (!q) return res.status(400).json({ error: 'Query manquante' })
 
-  const brandBoost = detectBrandBoost(q)
   const results: SupplierResult[] = []
-
-  /* ====================== SODIMAS ====================== */
-
-  try {
-    const initResponse = await fetch(
-      'https://my.sodimas.com/fr/recherche'
-    )
-
-    const rawCookies = initResponse.headers.get('set-cookie')
-    const cookieHeader = rawCookies
-      ? rawCookies.split(',').map((c) => c.split(';')[0]).join('; ')
-      : ''
-
-    const apiUrl =
-      `https://my.sodimas.com/index.cfm?action=search.jsonList` +
-      `&filtrePrincipal=searchstring` +
-      `&filtrePrincipalValue=${encodeURIComponent(q)}` +
-      `&searchstring=${encodeURIComponent(q)}` +
-      `&start=0&length=50`
-
-    const response = await fetch(apiUrl, {
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'Cookie': cookieHeader,
-      },
-    })
-
-    if (!response.ok) throw new Error()
-
-    const data = await response.json()
-    if (!data.data || data.data.length === 0) throw new Error()
-
-    let best: any = null
-    let bestScore = 0
-    let bestExact = false
-
-    for (const item of data.data) {
-      const combinedText = `${item.ref} ${item.designation}`
-      const { score, exactMatch } = scoreMatch(combinedText, q)
-
-      if (score > bestScore) {
-        best = item
-        bestScore = score
-        bestExact = exactMatch
-      }
-    }
-
-    if (!best) throw new Error()
-
-    if (brandBoost === 'Sodimas') bestScore += 30
-
-    results.push({
-      supplier: 'Sodimas',
-      title: best.designation || best.ref,
-      description: best.designation,
-      reference: best.ref,
-      image:
-        best.photo && best.photo !== ''
-          ? `https://my.sodimas.com/${best.photo}`
-          : null,
-      fallbackImage:
-        'https://my.sodimas.com/home/assets/img/com/logo.png',
-      link: `https://my.sodimas.com/fr/produit?ref=${best.ref}`,
-      score: bestScore,
-      exactMatch: bestExact,
-    })
-  } catch {}
 
   /* ====================== ELVACENTER ====================== */
 
@@ -160,20 +68,26 @@ export default async function handler(
       const { score, exactMatch } = scoreMatch(title, q)
 
       if (!bestMatch || score > bestMatch.score) {
-        bestMatch = { link, score, exactMatch }
+        bestMatch = { link, score, exactMatch, title }
       }
     })
 
-    if (!bestMatch) throw new Error()
-
-    if (brandBoost === 'Elvacenter') bestMatch.score += 30
+    // ✅ SEUIL MINIMUM DE PERTINENCE
+    if (!bestMatch || bestMatch.score < 15) {
+      throw new Error('Score trop faible')
+    }
 
     const productHtml = await fetch(bestMatch.link).then((r) => r.text())
     const $product = cheerio.load(productHtml)
 
-    const title = $product('h1.product_title').text().trim() || null
+    const title =
+      $product('h1.product_title').text().trim() ||
+      bestMatch.title ||
+      null
+
     const reference =
       $product('.sku').first().text().trim() || null
+
     const image =
       $product('.wp-post-image').attr('src') ||
       $product('meta[property="og:image"]').attr('content') ||
@@ -193,7 +107,7 @@ export default async function handler(
     })
   } catch {}
 
-  /* ====================== TRI GLOBAL ====================== */
+  /* ====================== TRI ====================== */
 
   results.sort((a, b) => b.score - a.score)
 
