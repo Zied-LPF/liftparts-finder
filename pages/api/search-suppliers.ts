@@ -38,7 +38,7 @@ export default async function handler(
   const results: SupplierResult[] = []
 
   /* =========================================================
-     🔹 SODIMAS — PROXY API JSON OFFICIELLE
+     🔹 SODIMAS — PROXY API JSON ROBUSTE
      ========================================================= */
   try {
     const apiUrl =
@@ -49,10 +49,22 @@ export default async function handler(
       `&start=0&length=50`
 
     const response = await fetch(apiUrl, {
+      method: 'GET',
       headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+        'Accept': 'application/json, text/javascript, */*; q=0.01',
         'X-Requested-With': 'XMLHttpRequest',
+        'Referer': 'https://my.sodimas.com/fr/recherche',
+        'Origin': 'https://my.sodimas.com',
+        'Accept-Language': 'fr-FR,fr;q=0.9',
+        'Connection': 'keep-alive'
       },
     })
+
+    if (!response.ok) {
+      throw new Error(`Sodimas API error ${response.status}`)
+    }
 
     const data = await response.json()
 
@@ -60,7 +72,7 @@ export default async function handler(
       throw new Error('Aucun produit')
     }
 
-    let best = null
+    let best: any = null
     let bestScore = 0
 
     for (const item of data.data) {
@@ -77,9 +89,10 @@ export default async function handler(
       throw new Error('Pas de match pertinent')
     }
 
-    const image = best.photo
-      ? `https://my.sodimas.com/${best.photo}`
-      : null
+    const image =
+      best.photo && best.photo !== ''
+        ? `https://my.sodimas.com/${best.photo}`
+        : null
 
     const productLink = `https://my.sodimas.com/fr/produit?ref=${best.ref}`
 
@@ -93,12 +106,13 @@ export default async function handler(
         'https://my.sodimas.com/home/assets/img/com/logo.png',
       link: productLink,
     })
-  } catch {
+  } catch (error) {
+    console.error('Sodimas proxy error:', error)
+
     results.push({
       supplier: 'Sodimas',
       title: 'Catalogue officiel Sodimas',
-      description:
-        'Recherche dans le catalogue Sodimas.',
+      description: 'Recherche dans le catalogue Sodimas.',
       reference: null,
       image: null,
       fallbackImage:
@@ -110,7 +124,7 @@ export default async function handler(
   }
 
   /* =========================================================
-     🔹 ELVACENTER (inchangé V2 stable)
+     🔹 ELVACENTER (V2 stable)
      ========================================================= */
   try {
     const searchUrl = `https://shop.elvacenter.com/?s=${encodeURIComponent(
