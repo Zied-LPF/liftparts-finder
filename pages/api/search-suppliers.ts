@@ -29,11 +29,11 @@ function scoreMatch(text: string, query: string) {
     exactMatch = true
   }
 
-  if (t.startsWith(q)) score += 20
-  if (t.includes(q)) score += 10
+  if (t.startsWith(q)) score += 25
+  if (t.includes(q)) score += 15
 
   query.split(' ').forEach((word) => {
-    if (t.includes(normalize(word))) score += 3
+    if (t.includes(normalize(word))) score += 4
   })
 
   return { score, exactMatch }
@@ -48,66 +48,74 @@ export default async function handler(
 
   const results: SupplierResult[] = []
 
-  /* ====================== ELVACENTER ====================== */
+  /* ====================== SODIMAS (HTML SCRAPING) ====================== */
 
   try {
-    const searchUrl = `https://shop.elvacenter.com/?s=${encodeURIComponent(
-      q
-    )}&post_type=product`
+    const searchUrl =
+      `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`
 
-    const searchHtml = await fetch(searchUrl).then((r) => r.text())
-    const $search = cheerio.load(searchHtml)
+    const response = await fetch(searchUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      },
+    })
+
+    const html = await response.text()
+    const $ = cheerio.load(html)
 
     let bestMatch: any = null
 
-    $search('a.woocommerce-LoopProduct-link').each((_, el) => {
-      const link = $search(el).attr('href')
-      const title = $search(el).text().trim()
-      if (!link || !title) return
+    $('.product-item, .produit, .product').each((_, el) => {
+      const title =
+        $(el).find('.product-title, h2, h3').text().trim()
+
+      const link =
+        $(el).find('a').attr('href') || null
+
+      const image =
+        $(el).find('img').attr('src') || null
+
+      if (!title || !link) return
 
       const { score, exactMatch } = scoreMatch(title, q)
 
       if (!bestMatch || score > bestMatch.score) {
-        bestMatch = { link, score, exactMatch, title }
+        bestMatch = {
+          title,
+          link: link.startsWith('http')
+            ? link
+            : `https://my.sodimas.com${link}`,
+          image: image
+            ? image.startsWith('http')
+              ? image
+              : `https://my.sodimas.com${image}`
+            : null,
+          score,
+          exactMatch,
+        }
       }
     })
 
-    // ✅ SEUIL MINIMUM DE PERTINENCE
-    if (!bestMatch || bestMatch.score < 15) {
-      throw new Error('Score trop faible')
+    if (bestMatch && bestMatch.score >= 20) {
+      results.push({
+        supplier: 'Sodimas',
+        title: bestMatch.title,
+        description: bestMatch.title,
+        reference: bestMatch.title,
+        image: bestMatch.image,
+        fallbackImage:
+          'https://my.sodimas.com/home/assets/img/com/logo.png',
+        link: bestMatch.link,
+        score: bestMatch.score,
+        exactMatch: bestMatch.exactMatch,
+      })
     }
+  } catch (err) {
+    console.error('Sodimas scraping error:', err)
+  }
 
-    const productHtml = await fetch(bestMatch.link).then((r) => r.text())
-    const $product = cheerio.load(productHtml)
-
-    const title =
-      $product('h1.product_title').text().trim() ||
-      bestMatch.title ||
-      null
-
-    const reference =
-      $product('.sku').first().text().trim() || null
-
-    const image =
-      $product('.wp-post-image').attr('src') ||
-      $product('meta[property="og:image"]').attr('content') ||
-      null
-
-    results.push({
-      supplier: 'Elvacenter',
-      title,
-      description: title,
-      reference,
-      image,
-      fallbackImage:
-        'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
-      link: bestMatch.link,
-      score: bestMatch.score,
-      exactMatch: bestMatch.exactMatch,
-    })
-  } catch {}
-
-  /* ====================== TRI ====================== */
+  /* ====================== TRI GLOBAL ====================== */
 
   results.sort((a, b) => b.score - a.score)
 
