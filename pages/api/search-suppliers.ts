@@ -19,6 +19,18 @@ function normalize(str: string) {
     .replace(/[\s\-_/]/g, '')
 }
 
+function detectBrandBoost(query: string) {
+  const q = query.toLowerCase()
+
+  if (q.includes('sodimas')) return 'Sodimas'
+  if (q.includes('kone')) return 'Kone'
+  if (q.includes('hauer')) return 'Hauer'
+  if (q.includes('mgti')) return 'MGTI'
+  if (q.includes('sodica')) return 'Sodica'
+
+  return null
+}
+
 function scoreMatch(text: string, query: string) {
   const t = normalize(text)
   const q = normalize(query)
@@ -50,21 +62,14 @@ export default async function handler(
     return res.status(400).json({ error: 'Query manquante' })
   }
 
+  const brandBoost = detectBrandBoost(q)
   const results: SupplierResult[] = []
 
-  /* =========================================================
-     🔹 SODIMAS — V2 INTELLIGENT SCORING
-     ========================================================= */
+  /* ====================== SODIMAS ====================== */
 
   try {
     const initResponse = await fetch(
-      'https://my.sodimas.com/fr/recherche',
-      {
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
-        },
-      }
+      'https://my.sodimas.com/fr/recherche'
     )
 
     const rawCookies = initResponse.headers.get('set-cookie')
@@ -81,12 +86,7 @@ export default async function handler(
 
     const response = await fetch(apiUrl, {
       headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
-        'Accept': 'application/json, text/javascript, */*; q=0.01',
         'X-Requested-With': 'XMLHttpRequest',
-        'Referer': 'https://my.sodimas.com/fr/recherche',
-        'Origin': 'https://my.sodimas.com',
         'Cookie': cookieHeader,
       },
     })
@@ -113,6 +113,8 @@ export default async function handler(
 
     if (!best) throw new Error()
 
+    if (brandBoost === 'Sodimas') bestScore += 30
+
     results.push({
       supplier: 'Sodimas',
       title: best.designation || best.ref,
@@ -128,26 +130,9 @@ export default async function handler(
       score: bestScore,
       exactMatch: bestExact,
     })
-  } catch {
-    results.push({
-      supplier: 'Sodimas',
-      title: 'Catalogue officiel Sodimas',
-      description: 'Recherche dans le catalogue Sodimas.',
-      reference: null,
-      image: null,
-      fallbackImage:
-        'https://my.sodimas.com/home/assets/img/com/logo.png',
-      link: `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(
-        q
-      )}`,
-      score: 0,
-      exactMatch: false,
-    })
-  }
+  } catch {}
 
-  /* =========================================================
-     🔹 ELVACENTER — V2 INTELLIGENT SCORING
-     ========================================================= */
+  /* ====================== ELVACENTER ====================== */
 
   try {
     const searchUrl = `https://shop.elvacenter.com/?s=${encodeURIComponent(
@@ -173,6 +158,8 @@ export default async function handler(
 
     if (!bestMatch) throw new Error()
 
+    if (brandBoost === 'Elvacenter') bestMatch.score += 30
+
     const productHtml = await fetch(bestMatch.link).then((r) => r.text())
     const $product = cheerio.load(productHtml)
 
@@ -196,24 +183,8 @@ export default async function handler(
       score: bestMatch.score,
       exactMatch: bestMatch.exactMatch,
     })
-  } catch {
-    results.push({
-      supplier: 'Elvacenter',
-      title: 'Catalogue Elvacenter',
-      description: 'Recherche dans le catalogue Elvacenter.',
-      reference: null,
-      image: null,
-      fallbackImage:
-        'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
-      link: `https://shop.elvacenter.com/?s=${encodeURIComponent(
-        q
-      )}&post_type=product`,
-      score: 0,
-      exactMatch: false,
-    })
-  }
+  } catch {}
 
-  // 🔥 TRI GLOBAL TYPE GOOGLE
   results.sort((a, b) => b.score - a.score)
 
   return res.status(200).json(results)
