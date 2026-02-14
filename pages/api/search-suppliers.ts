@@ -9,28 +9,36 @@ type SupplierResult = {
   image: string | null
   fallbackImage: string
   link: string
+  score: number
+  exactMatch: boolean
+}
+
+function normalize(str: string) {
+  return str
+    .toLowerCase()
+    .replace(/[\s\-_/]/g, '')
 }
 
 function scoreMatch(text: string, query: string) {
+  const t = normalize(text)
+  const q = normalize(query)
+
   let score = 0
-  const t = text.toLowerCase()
-  const q = query.toLowerCase()
+  let exactMatch = false
 
-  if (t.includes(q)) score += 5
-  if (t.replace(/\s/g, '').includes(q.replace(/\s/g, ''))) score += 3
+  if (t === q) {
+    score += 50
+    exactMatch = true
+  }
 
-  q.split(' ').forEach((word) => {
-    if (t.includes(word)) score += 1
+  if (t.startsWith(q)) score += 20
+  if (t.includes(q)) score += 10
+
+  query.split(' ').forEach((word) => {
+    if (t.includes(normalize(word))) score += 2
   })
 
-  return score
-}
-
-function extractCookies(setCookieHeaders: string[] | undefined) {
-  if (!setCookieHeaders) return ''
-  return setCookieHeaders
-    .map((c) => c.split(';')[0])
-    .join('; ')
+  return { score, exactMatch }
 }
 
 export default async function handler(
@@ -45,10 +53,10 @@ export default async function handler(
   const results: SupplierResult[] = []
 
   /* =========================================================
-     🔹 SODIMAS — BOOTSTRAP SESSION + API JSON
+     🔹 SODIMAS — V2 INTELLIGENT SCORING
      ========================================================= */
+
   try {
-    // 1️⃣ Bootstrap session
     const initResponse = await fetch(
       'https://my.sodimas.com/fr/recherche',
       {
@@ -64,7 +72,6 @@ export default async function handler(
       ? rawCookies.split(',').map((c) => c.split(';')[0]).join('; ')
       : ''
 
-    // 2️⃣ Appel API avec cookies
     const apiUrl =
       `https://my.sodimas.com/index.cfm?action=search.jsonList` +
       `&filtrePrincipal=searchstring` +
@@ -73,7 +80,6 @@ export default async function handler(
       `&start=0&length=50`
 
     const response = await fetch(apiUrl, {
-      method: 'GET',
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
@@ -85,53 +91,44 @@ export default async function handler(
       },
     })
 
-    if (!response.ok) {
-      throw new Error(`Sodimas API error ${response.status}`)
-    }
+    if (!response.ok) throw new Error()
 
     const data = await response.json()
-
-    if (!data.data || data.data.length === 0) {
-      throw new Error('Aucun produit')
-    }
+    if (!data.data || data.data.length === 0) throw new Error()
 
     let best: any = null
     let bestScore = 0
+    let bestExact = false
 
     for (const item of data.data) {
       const combinedText = `${item.ref} ${item.designation}`
-      const score = scoreMatch(combinedText, q)
+      const { score, exactMatch } = scoreMatch(combinedText, q)
 
       if (score > bestScore) {
         best = item
         bestScore = score
+        bestExact = exactMatch
       }
     }
 
-    if (!best) {
-      throw new Error('Pas de match pertinent')
-    }
-
-    const image =
-      best.photo && best.photo !== ''
-        ? `https://my.sodimas.com/${best.photo}`
-        : null
-
-    const productLink = `https://my.sodimas.com/fr/produit?ref=${best.ref}`
+    if (!best) throw new Error()
 
     results.push({
       supplier: 'Sodimas',
       title: best.designation || best.ref,
       description: best.designation,
       reference: best.ref,
-      image,
+      image:
+        best.photo && best.photo !== ''
+          ? `https://my.sodimas.com/${best.photo}`
+          : null,
       fallbackImage:
         'https://my.sodimas.com/home/assets/img/com/logo.png',
-      link: productLink,
+      link: `https://my.sodimas.com/fr/produit?ref=${best.ref}`,
+      score: bestScore,
+      exactMatch: bestExact,
     })
-  } catch (error) {
-    console.error('Sodimas bootstrap error:', error)
-
+  } catch {
     results.push({
       supplier: 'Sodimas',
       title: 'Catalogue officiel Sodimas',
@@ -143,12 +140,15 @@ export default async function handler(
       link: `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(
         q
       )}`,
+      score: 0,
+      exactMatch: false,
     })
   }
 
   /* =========================================================
-     🔹 ELVACENTER (inchangé stable)
+     🔹 ELVACENTER — V2 INTELLIGENT SCORING
      ========================================================= */
+
   try {
     const searchUrl = `https://shop.elvacenter.com/?s=${encodeURIComponent(
       q
@@ -157,17 +157,17 @@ export default async function handler(
     const searchHtml = await fetch(searchUrl).then((r) => r.text())
     const $search = cheerio.load(searchHtml)
 
-    let bestMatch: { link: string; score: number } | null = null
+    let bestMatch: any = null
 
     $search('a.woocommerce-LoopProduct-link').each((_, el) => {
       const link = $search(el).attr('href')
       const title = $search(el).text().trim()
       if (!link || !title) return
 
-      const score = scoreMatch(title, q)
+      const { score, exactMatch } = scoreMatch(title, q)
 
       if (!bestMatch || score > bestMatch.score) {
-        bestMatch = { link, score }
+        bestMatch = { link, score, exactMatch }
       }
     })
 
@@ -193,6 +193,8 @@ export default async function handler(
       fallbackImage:
         'https://shop.elvacenter.com/wp-content/uploads/sites/5/2022/08/beelmerk-elvacenter.svg',
       link: bestMatch.link,
+      score: bestMatch.score,
+      exactMatch: bestMatch.exactMatch,
     })
   } catch {
     results.push({
@@ -206,8 +208,13 @@ export default async function handler(
       link: `https://shop.elvacenter.com/?s=${encodeURIComponent(
         q
       )}&post_type=product`,
+      score: 0,
+      exactMatch: false,
     })
   }
+
+  // 🔥 TRI GLOBAL TYPE GOOGLE
+  results.sort((a, b) => b.score - a.score)
 
   return res.status(200).json(results)
 }
