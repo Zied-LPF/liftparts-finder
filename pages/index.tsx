@@ -1,122 +1,87 @@
-import { useState } from 'react'
-
-type SupplierResult = {
-  supplier: string
-  title: string | null
-  description: string | null
-  reference: string | null
-  image: string | null
-  fallbackImage: string
-  link: string
-}
+import { useState } from "react"
 
 export default function Home() {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<SupplierResult[]>([])
-  const [loading, setLoading] = useState(false)
+  const [query, setQuery] = useState("")
+  const [results, setResults] = useState<any[]>([])
 
-  const runSearch = async () => {
-    if (!query.trim()) return
-    setLoading(true)
-    const res = await fetch(
-      `/api/search-suppliers?q=${encodeURIComponent(query)}`
-    )
+  const handleSearch = async () => {
+    if (!query) return
+
+    const res = await fetch(`/api/search?q=${query}`)
     const data = await res.json()
     setResults(data)
-    setLoading(false)
   }
 
   return (
-    <main style={{ padding: 32, background: '#f4f6f8', minHeight: '100vh' }}>
-      <h1>🔧 LiftParts Finder</h1>
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold mb-6 text-center">
+          LiftParts Finder
+        </h1>
 
-      <div style={{ display: 'flex', gap: 12, margin: '24px 0' }}>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && runSearch()}
-          placeholder="Référence pièce"
-          style={{ flex: 1, padding: 12 }}
-        />
-        <button onClick={runSearch}>Rechercher</button>
-      </div>
-
-      {loading && <p>Recherche en cours…</p>}
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))',
-          gap: 24,
-        }}
-      >
-        {results.map((r) => (
-          <div
-            key={r.supplier}
-            style={{ background: '#fff', padding: 20, borderRadius: 8 }}
+        {/* Barre de recherche */}
+        <div className="flex gap-2 mb-8">
+          <input
+            type="text"
+            placeholder="Rechercher une pièce..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSearch()
+            }}
+            className="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onClick={handleSearch}
+            className="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700 transition"
           >
-            <h3>{r.supplier}</h3>
+            Rechercher
+          </button>
+        </div>
 
+        {/* Résultats */}
+        <div>
+          {results.length === 0 && (
+            <p className="text-center text-gray-500">
+              Aucun résultat pour le moment.
+            </p>
+          )}
+
+          {results.map((result, index) => (
             <div
-              style={{
-                height: 180,
-                border: '1px solid #ddd',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+              key={index}
+              className="bg-white shadow-md rounded-xl p-5 mb-4 border hover:shadow-lg transition"
             >
-              <img
-                src={r.image ?? r.fallbackImage}
-                alt={r.title ?? r.supplier}
-                style={{ maxHeight: '100%', maxWidth: '100%' }}
-              />
-            </div>
-
-            <strong>
-              {r.title ?? 'Résultats disponibles chez ce fournisseur'}
-            </strong>
-
-            {r.description && (
-              <p style={{ fontSize: 13, color: '#555' }}>{r.description}</p>
-            )}
-
-            {r.reference && (
-              <div
-                style={{
-                  fontSize: 12,
-                  fontFamily: 'monospace',
-                  color: '#666',
-                }}
-              >
-                Référence : {r.reference}
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-lg font-semibold">
+                  {result.supplier}
+                </h2>
               </div>
-            )}
 
-            <div style={{ fontSize: 12, marginTop: 4, color: '#666' }}>
-              Recherche : {query}
+              <p className="text-gray-900 font-medium mb-1">
+                {result.name}
+              </p>
+
+              {result.brand && (
+                <span className="inline-block bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full mb-3">
+                  {result.brand}
+                </span>
+              )}
+
+              <div>
+                <a
+                  href={result.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                >
+                  Voir chez fournisseur
+                </a>
+              </div>
             </div>
-
-            <a
-              href={r.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'block',
-                marginTop: 12,
-                background: '#0d6efd',
-                color: '#fff',
-                textAlign: 'center',
-                padding: 10,
-                borderRadius: 6,
-                textDecoration: 'none',
-              }}
-            >
-              Voir chez {r.supplier}
-            </a>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </main>
+    </div>
   )
 }
