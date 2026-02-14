@@ -13,18 +13,26 @@ type SupplierResult = {
   exactMatch: boolean
 }
 
+type Brand =
+  | 'Sodimas'
+  | 'Elvacenter'
+  | 'Hauer'
+  | 'Kone'
+  | 'MGTI'
+  | 'Sodica'
+  | null
+
 function normalize(str: string) {
-  return str
-    .toLowerCase()
-    .replace(/[\s\-_/]/g, '')
+  return str.toLowerCase().replace(/[\s\-_/]/g, '')
 }
 
-function detectBrandBoost(query: string) {
+function detectBrandBoost(query: string): Brand {
   const q = query.toLowerCase()
 
   if (q.includes('sodimas')) return 'Sodimas'
-  if (q.includes('kone')) return 'Kone'
+  if (q.includes('elvacenter')) return 'Elvacenter'
   if (q.includes('hauer')) return 'Hauer'
+  if (q.includes('kone')) return 'Kone'
   if (q.includes('mgti')) return 'MGTI'
   if (q.includes('sodica')) return 'Sodica'
 
@@ -184,6 +192,8 @@ export default async function handler(
       exactMatch: bestMatch.exactMatch,
     })
   } catch {}
+
+  /* ====================== TRI GLOBAL ====================== */
 
   results.sort((a, b) => b.score - a.score)
 
