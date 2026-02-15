@@ -2,7 +2,14 @@
 import { useState } from 'react'
 import { createWorker, PSM } from 'tesseract.js'
 
-type Result = { supplier: string; title: string; description: string; image: string | null; fallbackImage: string; link: string }
+type Result = {
+  supplier: string
+  title: string
+  description: string
+  image: string | null
+  fallbackImage: string
+  link: string
+}
 
 export default function Home() {
   const [query, setQuery] = useState('')
@@ -17,8 +24,11 @@ export default function Home() {
       const res = await fetch(`/api/search-suppliers?q=${encodeURIComponent(query)}`)
       const data = await res.json()
       setResults(data)
-    } catch (err) { console.error(err) }
-    finally { setLoading(false) }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSearchImage = async () => {
@@ -30,6 +40,7 @@ export default function Home() {
       await worker.loadLanguage('fra+eng')
       await worker.initialize('fra+eng')
       await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_BLOCK })
+
       const { data: { text } } = await worker.recognize(file)
       await worker.terminate()
 
@@ -39,8 +50,11 @@ export default function Home() {
       const res = await fetch(`/api/search-suppliers?q=${encodeURIComponent(queryFromImage)}`)
       const data = await res.json()
       setResults(data)
-    } catch (err) { console.error(err) }
-    finally { setLoading(false) }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

@@ -34,6 +34,7 @@ function scoreMatch(text: string, query: string) {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const q = (req.query.q as string)?.trim()
   if (!q) return res.status(400).json({ error: 'Query manquante' })
+
   const results: SupplierResult[] = []
 
   const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY
@@ -70,7 +71,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           })
         }
       }
-    } catch (err) { console.error('Google search error:', err) }
+    } catch (err) {
+      console.error('Google search error:', err)
+    }
   }
 
   /* SODIMAS FALLBACK */
@@ -110,7 +113,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           exactMatch: bestMatch.exactMatch,
         })
       }
-    } catch (err) { console.error('Sodimas scraping error:', err) }
+    } catch (err) {
+      console.error('Sodimas scraping error:', err)
+    }
   }
 
   results.sort((a, b) => b.score - a.score)
