@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from "next"
-import puppeteer from "puppeteer"
 
 type SupplierResult = {
   supplier: string
@@ -29,7 +28,7 @@ function scoreMatch(text: string, query: string) {
   return { score, exactMatch }
 }
 
-// Fournisseurs multi-fallback
+// Fournisseurs publics pour Google fallback
 const SUPPLIERS = [
   { name: "Sodimas", site: "my.sodimas.com" },
   { name: "Otis", site: "www.otis.com" },
@@ -52,7 +51,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   console.log("🔹 Recherche pour:", q)
 
   try {
-    // === Multi-fournisseurs via Google ===
     for (const supplier of SUPPLIERS) {
       const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}+site:${supplier.site}`
       const response = await fetch(googleUrl)
@@ -87,52 +85,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // === Fallback Puppeteer pour Sodimas si aucun résultat Google ===
-    if (results.length === 0) {
-      console.log("🔹 Aucun résultat Google → fallback Puppeteer Sodimas")
-      const browser = await puppeteer.launch({ args: ['--no-sandbox','--disable-setuid-sandbox'] })
-      const page = await browser.newPage()
-      await page.goto(`https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`, { waitUntil: 'networkidle2' })
-
-      const items = await page.$$eval('.product-item, .produit, .product', els => {
-        return els.map(el => {
-          const titleEl = el.querySelector('.product-title, h2, h3')
-          const linkEl = el.querySelector('a')
-          const imgEl = el.querySelector('img')
-          return {
-            title: titleEl?.textContent?.trim() || null,
-            link: linkEl?.getAttribute('href') || null,
-            image: imgEl?.getAttribute('src') || null
-          }
-        })
-      })
-
-      await browser.close()
-
-      items.forEach(item => {
-        if (!item.title || !item.link) return
-        const { score, exactMatch } = scoreMatch(item.title, q)
-        results.push({
-          supplier: "Sodimas",
-          title: item.title,
-          description: item.title,
-          reference: item.title,
-          image: item.image?.startsWith('http') ? item.image : `https://my.sodimas.com${item.image}`,
-          fallbackImage: "/no-image.png",
-          link: item.link.startsWith('http') ? item.link : `https://my.sodimas.com${item.link}`,
-          score,
-          exactMatch
-        })
-      })
-    }
-
-    // === Tri final ===
+    // Tri final
     results.sort((a, b) => b.score - a.score)
     console.log(`🔹 Résultats finaux: ${results.length}`)
     return res.status(200).json(results)
 
   } catch (err) {
-    console.error("Erreur multi-fournisseurs + Puppeteer:", err)
-    return res.status(500).json({ error: "Erreur recherche multi-fournisseurs + Puppeteer" })
+    console.error("Erreur multi-fournisseurs Google:", err)
+    return res.status(500).json({ error: "Erreur recherche multi-fournisseurs Google" })
   }
 }
