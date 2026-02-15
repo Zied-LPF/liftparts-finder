@@ -27,10 +27,10 @@ export default function Home() {
     addLog(`🔹 Recherche pour: ${q}`)
     try {
       const res = await fetch(`/api/search-suppliers?q=${encodeURIComponent(q)}`)
-      const data = await res.json()
+      const data: Result[] = await res.json()
       addLog(`🔹 API renvoie ${data.length} résultat(s)`)
 
-      data.forEach((r: any, i: number) => {
+      data.forEach((r, i) => {
         addLog(`   - ${i + 1}: ${r.title} [${r.supplier}] score:${r.score}`)
       })
 
