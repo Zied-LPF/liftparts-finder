@@ -1,102 +1,112 @@
-'use client'
+// pages/index.tsx
 import { useState } from "react"
 
-type Result = {
+type SupplierResult = {
   supplier: string
   title: string
-  description: string
+  reference: string
+  link: string
   image: string | null
   fallbackImage: string
-  link: string
   score: number
   exactMatch: boolean
+  fromGoogle: boolean
 }
 
 export default function Home() {
   const [query, setQuery] = useState("")
-  const [results, setResults] = useState<Result[]>([])
+  const [results, setResults] = useState<SupplierResult[]>([])
   const [loading, setLoading] = useState(false)
-  const [log, setLog] = useState<string[]>([])
+  const [debugLogs, setDebugLogs] = useState<string[]>([])
 
-  const addLog = (msg: string) => setLog(prev => [msg, ...prev])
-
-  const fetchResults = async (q: string) => {
+  const handleSearch = async () => {
+    if (!query.trim()) return
     setLoading(true)
-    addLog(`🔹 Recherche pour: ${q}`)
+    setResults([])
+    setDebugLogs((logs) => [...logs, `🔹 Recherche pour: ${query}`])
+
     try {
-      const res = await fetch(`/api/search-suppliers?q=${encodeURIComponent(q)}`)
-      const data: Result[] = await res.json()
-      addLog(`🔹 API renvoie ${data.length} résultat(s)`)
-
-      data.forEach((r, i) => {
-        addLog(`   - ${i + 1}: ${r.title} [${r.supplier}] score:${r.score}`)
-      })
-
+      const res = await fetch(`/api/search-suppliers?q=${encodeURIComponent(query)}`)
+      const data: SupplierResult[] = await res.json()
       setResults(data)
+      setDebugLogs((logs) => [...logs, `🔹 API renvoie ${data.length} résultat(s)`])
     } catch (err) {
-      addLog(`⚠️ Erreur fetch: ${err}`)
-      setResults([])
+      console.error(err)
+      setDebugLogs((logs) => [...logs, `⚠ Erreur API`])
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
-  }
-
-  const handleSearchText = async () => {
-    if (!query) return
-    await fetchResults(query)
   }
 
   return (
-    <div style={{ padding: 40, fontFamily: "Arial, sans-serif" }}>
-      <h1 style={{ fontSize: 32, marginBottom: 20 }}>LiftParts Finder</h1>
+    <div className="min-h-screen bg-gray-100 p-6">
+      <h1 className="text-3xl font-bold mb-4 text-center">LiftParts Finder</h1>
 
-      <div style={{ marginBottom: 20, display: "flex", gap: 10 }}>
+      {/* Barre de recherche */}
+      <div className="flex justify-center mb-6">
         <input
           type="text"
+          placeholder="Recherche"
           value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && handleSearchText()}
-          placeholder="Référence ou mot-clé..."
-          style={{ padding: 10, width: 300, fontSize: 16, borderRadius: 5, border: "1px solid #ccc" }}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          className="border rounded-l-lg px-4 py-2 w-80 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
-          onClick={handleSearchText}
-          style={{ padding: "10px 15px", borderRadius: 5, background: "#0070f3", color: "#fff", border: "none", cursor: "pointer" }}
+          onClick={handleSearch}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 rounded-r-lg"
         >
-          Rechercher
+          {loading ? "…" : "Rechercher"}
         </button>
       </div>
 
-      {loading && <p>Recherche en cours...</p>}
+      {/* Résultats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {results.length === 0 && !loading && (
+          <div className="col-span-full text-center text-gray-500">
+            Aucun résultat trouvé
+          </div>
+        )}
 
-      <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 15 }}>
         {results.map((r, i) => (
           <a
             key={i}
             href={r.link}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ display: "flex", alignItems: "center", gap: 15, padding: 10, border: "1px solid #eee", borderRadius: 5, textDecoration: "none", color: "#000" }}
+            className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-shadow duration-200 flex flex-col"
           >
-            <img
-              src={r.image || r.fallbackImage || "/no-image.png"}
-              alt={r.title}
-              style={{ width: 60, height: 60, objectFit: "contain", borderRadius: 5, background: "#f5f5f5" }}
-            />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 16 }}>{r.title}</div>
-              <div style={{ fontSize: 14, color: "#555" }}>{r.supplier}</div>
+            <div className="h-40 w-full bg-gray-200 flex items-center justify-center">
+              <img
+                src={r.image || r.fallbackImage}
+                alt={r.title}
+                className="max-h-full max-w-full object-contain"
+              />
             </div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "#0070f3" }}>{r.score}</div>
+            <div className="p-4 flex-1 flex flex-col justify-between">
+              <h2 className="font-semibold text-lg mb-2">{r.title}</h2>
+              <div className="flex justify-between items-center">
+                <span
+                  className={`px-2 py-1 text-xs rounded-full font-semibold ${
+                    r.fromGoogle ? "bg-yellow-200 text-yellow-800" : "bg-blue-200 text-blue-800"
+                  }`}
+                >
+                  {r.fromGoogle ? "Google" : r.supplier}
+                </span>
+                <span className="text-xs text-gray-500">{r.score} pts</span>
+              </div>
+            </div>
           </a>
         ))}
-        {!loading && results.length === 0 && query && <p>Aucun résultat trouvé</p>}
       </div>
 
-      <div style={{ marginTop: 20, background: "#f0f0f0", padding: 10, borderRadius: 5 }}>
-        <h3>Logs Debug</h3>
-        <div style={{ maxHeight: 300, overflowY: "auto", fontFamily: "monospace", fontSize: 14 }}>
-          {log.map((l, i) => <div key={i}>{l}</div>)}
-        </div>
+      {/* Logs Debug */}
+      <div className="mt-6 max-h-60 overflow-y-auto p-2 bg-gray-50 border rounded">
+        {debugLogs.map((log, i) => (
+          <div key={i} className="text-xs text-gray-700">
+            {log}
+          </div>
+        ))}
       </div>
     </div>
   )

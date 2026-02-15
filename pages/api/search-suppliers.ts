@@ -1,15 +1,18 @@
+// pages/api/search-suppliers.ts
 import type { NextApiRequest, NextApiResponse } from "next"
+import fetch from "node-fetch"
+import * as cheerio from "cheerio"
 
 type SupplierResult = {
   supplier: string
   title: string
-  description: string
   reference: string
+  link: string
   image: string | null
   fallbackImage: string
-  link: string
   score: number
   exactMatch: boolean
+  fromGoogle: boolean
 }
 
 function normalize(str: string) {
@@ -19,79 +22,114 @@ function normalize(str: string) {
 function scoreMatch(text: string, query: string) {
   const t = normalize(text)
   const q = normalize(query)
+
   let score = 0
   let exactMatch = false
-  if (t === q) { score += 50; exactMatch = true }
+
+  if (t === q) {
+    score += 50
+    exactMatch = true
+  }
   if (t.startsWith(q)) score += 25
   if (t.includes(q)) score += 15
-  query.split(" ").forEach(word => { if (t.includes(normalize(word))) score += 4 })
+
+  query.split(" ").forEach((word) => {
+    if (t.includes(normalize(word))) score += 4
+  })
+
   return { score, exactMatch }
 }
 
-// Fournisseurs publics pour Google fallback
-const SUPPLIERS = [
-  { name: "Sodimas", site: "my.sodimas.com" },
-  { name: "Otis", site: "www.otis.com" },
-  { name: "Schindler", site: "www.schindler.com" },
-  { name: "Kone", site: "www.kone.com" },
+const suppliers = [
+  { name: "Sodimas", baseUrl: "https://my.sodimas.com/fr/recherche?searchstring=", brands: ["Sodimas"] },
+  { name: "Elvacenter", baseUrl: "https://shop.elvacenter.com/#/dfclassic/query=" },
+  { name: "Hauer", baseUrl: "https://www.elevatorshop.de/fr#/dfclassic/query=" },
+  { name: "Kone", baseUrl: "https://parts.kone.com/#/!1@&searchTerm=", brands: ["Kone"] },
+  { name: "MGTI", baseUrl: "https://www.mgti.fr/PBSearch.asp?ActionID=1&CCode=2&ShowSMImg=1&SearchText=" },
+  { name: "Sodica", baseUrl: "https://www.sodica.fr/fr/search?SearchTerm=" },
+  { name: "RS", baseUrl: "https://befr.rs-online.com/web/c/?searchTerm=" },
+  { name: "Cebeo", baseUrl: "https://www.cebeo.be/catalog/fr-be/search/" },
 ]
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const q = (req.query.q as string)?.trim()
   if (!q) return res.status(400).json({ error: "Query manquante" })
 
+  const results: SupplierResult[] = []
+
+  // ==================== Recherche fournisseurs en ligne ====================
+  for (const supplier of suppliers) {
+    try {
+      const url = `${supplier.baseUrl}${encodeURIComponent(q)}`
+      const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } })
+      const html = await response.text()
+      const $ = cheerio.load(html)
+
+      let bestMatch: any = null
+
+      // On prend les titres des produits visibles
+      $("a, h2, h3, .product-title, .produit").each((_, el) => {
+        const title = $(el).text().trim()
+        const link = $(el).attr("href") || url
+        if (!title) return
+
+        const { score, exactMatch } = scoreMatch(title, q)
+        if (!bestMatch || score > bestMatch.score) {
+          bestMatch = { title, link, score, exactMatch }
+        }
+      })
+
+      if (bestMatch && bestMatch.score > 0) {
+        results.push({
+          supplier: supplier.name,
+          title: bestMatch.title,
+          reference: bestMatch.title,
+          link: bestMatch.link.startsWith("http") ? bestMatch.link : supplier.baseUrl,
+          image: null,
+          fallbackImage: "/no-image.png",
+          score: bestMatch.score,
+          exactMatch: bestMatch.exactMatch,
+          fromGoogle: false,
+        })
+      }
+    } catch (err) {
+      console.error(`Erreur scraping ${supplier.name}:`, err)
+    }
+  }
+
+  // ==================== Recherche Google ====================
   const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY
   const GOOGLE_CX = process.env.GOOGLE_CX
 
-  if (!GOOGLE_API_KEY || !GOOGLE_CX) {
-    return res.status(500).json({ error: "Google API key ou CX manquant" })
-  }
+  if (GOOGLE_API_KEY && GOOGLE_CX) {
+    try {
+      const googleRes = await fetch(
+        `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}`
+      )
+      const googleData = await googleRes.json()
 
-  const results: SupplierResult[] = []
-  console.log("🔹 Recherche pour:", q)
-
-  try {
-    for (const supplier of SUPPLIERS) {
-      const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}+site:${supplier.site}`
-      const response = await fetch(googleUrl)
-      const data = await response.json()
-
-      if (data.error) {
-        console.warn(`⚠️ Google API bloquée pour ${supplier.name}:`, data.error.message)
-        continue
-      }
-
-      if (!data.items?.length) {
-        console.log(`🔹 Aucun résultat pour ${supplier.name}`)
-        continue
-      }
-
-      data.items.forEach((item: any) => {
-        const title = item.title || ""
-        const link = item.link || ""
-        const image = item.pagemap?.cse_image?.[0]?.src || null
-        const { score, exactMatch } = scoreMatch(title, q)
-        results.push({
-          supplier: supplier.name,
-          title,
-          description: title,
-          reference: title,
-          image,
-          fallbackImage: "/no-image.png",
-          link,
-          score,
-          exactMatch
+      if (googleData.items && googleData.items.length > 0) {
+        googleData.items.forEach((item: any) => {
+          results.push({
+            supplier: "Google",
+            title: item.title,
+            reference: item.title,
+            link: item.link,
+            image: item.pagemap?.cse_image?.[0]?.src || null,
+            fallbackImage: "/no-image.png",
+            score: 10,
+            exactMatch: false,
+            fromGoogle: true,
+          })
         })
-      })
+      }
+    } catch (err) {
+      console.error("Erreur Google API:", err)
     }
-
-    // Tri final
-    results.sort((a, b) => b.score - a.score)
-    console.log(`🔹 Résultats finaux: ${results.length}`)
-    return res.status(200).json(results)
-
-  } catch (err) {
-    console.error("Erreur multi-fournisseurs Google:", err)
-    return res.status(500).json({ error: "Erreur recherche multi-fournisseurs Google" })
   }
+
+  // ==================== Tri par score ====================
+  results.sort((a, b) => b.score - a.score)
+
+  return res.status(200).json(results)
 }
