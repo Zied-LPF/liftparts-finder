@@ -34,20 +34,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if(!q) return res.status(400).json({ error: "Query manquante" })
 
   const results: SupplierResult[] = []
-  const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY
-  const GOOGLE_CX = process.env.GOOGLE_CX
 
   console.log("🔹 Recherche pour:", q)
 
   /* ====================== GOOGLE SEARCH (si clé server valide) ====================== */
+  const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY
+  const GOOGLE_CX = process.env.GOOGLE_CX
+
   if(GOOGLE_API_KEY && GOOGLE_CX){
     try{
       const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}`
       const response = await fetch(googleUrl)
       const data = await response.json()
-      
       if(data.error){
-        console.warn("⚠️ Google API bloquée ou invalide, on passe au fallback Sodimas", data.error.message)
+        console.warn("⚠️ Google API bloquée ou invalide:", data.error.message)
       } else if(data.items?.length){
         let bestMatch:any = null
         data.items.forEach((item:any)=>{
@@ -83,34 +83,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const html = await response.text()
     const $ = cheerio.load(html)
 
-    const productSelector = ".product-card, .product-item, .produit, .product"
-    let bestMatch:any = null
+    const productSelector = "a, h2, h3, .product, .product-item, .product-card, .produit"
+    let count = 0
     $(productSelector).each((_,el)=>{
-      const title = $(el).find(".product-title, h2, h3, a").first().text().trim()
-      const link = $(el).find("a").attr("href") || null
+      const title = $(el).text().trim()
+      const link = $(el).attr("href") || null
       const image = $(el).find("img").attr("src") || null
-      if(!title || !link) return
-      const { score, exactMatch } = scoreMatch(title,q)
-      if(!bestMatch || score>bestMatch.score) bestMatch={ 
-        title,
-        link: link.startsWith("http") ? link : `https://my.sodimas.com${link}`,
-        image: image ? (image.startsWith("http")?image:`https://my.sodimas.com${image}`) : null,
-        score,
-        exactMatch
+      if(title){
+        const { score, exactMatch } = scoreMatch(title,q)
+        count++
+        results.push({
+          supplier: "Sodimas",
+          title,
+          description: title,
+          reference: title,
+          image: image ? (image.startsWith("http")?image:`https://my.sodimas.com${image}`):null,
+          fallbackImage: "https://my.sodimas.com/home/assets/img/com/logo.png",
+          link: link ? (link.startsWith("http")?link:`https://my.sodimas.com${link}`) : "#",
+          score,
+          exactMatch
+        })
       }
     })
-
-    if(bestMatch) results.push({
-      supplier: "Sodimas",
-      title: bestMatch.title,
-      description: bestMatch.title,
-      reference: bestMatch.title,
-      image: bestMatch.image,
-      fallbackImage: "https://my.sodimas.com/home/assets/img/com/logo.png",
-      link: bestMatch.link,
-      score: bestMatch.score,
-      exactMatch: bestMatch.exactMatch
-    })
+    console.log(`🔹 Total produits Sodimas trouvés: ${count}`)
   }catch(err){
     console.error("Sodimas scraping error:", err)
   }
