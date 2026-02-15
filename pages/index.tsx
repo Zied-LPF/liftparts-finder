@@ -24,11 +24,8 @@ export default function Home() {
       const res = await fetch(`/api/search-suppliers?q=${encodeURIComponent(query)}`)
       const data = await res.json()
       setResults(data)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
+    } catch (err) {}
+    setLoading(false)
   }
 
   const handleSearchImage = async () => {
@@ -45,22 +42,24 @@ export default function Home() {
       await worker.terminate()
 
       const queryFromImage = text.trim()
-      if (!queryFromImage) { setResults([]); setLoading(false); return }
+      if (!queryFromImage) {
+        setResults([])
+        setLoading(false)
+        return
+      }
 
       const res = await fetch(`/api/search-suppliers?q=${encodeURIComponent(queryFromImage)}`)
       const data = await res.json()
       setResults(data)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
+    } catch (err) {}
+    setLoading(false)
   }
 
   return (
     <div style={{ padding: 40 }}>
       <h1>LiftParts Finder</h1>
 
+      {/* recherche texte */}
       <div style={{ marginBottom: 20 }}>
         <input
           type="text"
@@ -70,12 +69,21 @@ export default function Home() {
           placeholder="Référence ou mot-clé..."
           style={{ padding: 10, width: 300 }}
         />
-        <button onClick={handleSearchText} style={{ marginLeft: 10 }}>Rechercher</button>
+        <button onClick={handleSearchText} style={{ marginLeft: 10 }}>
+          Rechercher
+        </button>
       </div>
 
+      {/* recherche image */}
       <div style={{ marginBottom: 20 }}>
-        <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] || null)} />
-        <button onClick={handleSearchImage} style={{ marginLeft: 10 }}>Recherche par image</button>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={e => setFile(e.target.files?.[0] || null)}
+        />
+        <button onClick={handleSearchImage} style={{ marginLeft: 10 }}>
+          Recherche par image
+        </button>
       </div>
 
       {loading && <p>Recherche en cours...</p>}
@@ -88,7 +96,9 @@ export default function Home() {
         </div>
       ))}
 
-      {!loading && results.length === 0 && (query || file) && <p>Aucun résultat trouvé</p>}
+      {!loading && results.length === 0 && (query || file) && (
+        <p>Aucun résultat trouvé</p>
+      )}
     </div>
   )
 }
