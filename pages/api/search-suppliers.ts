@@ -28,13 +28,17 @@ function scoreMatch(text: string, query: string) {
   return { score, exactMatch }
 }
 
+const FALLBACK_SUPPLIERS = [
+  { name: "Sodimas", urlPrefix: "my.sodimas.com" },
+  { name: "Otis", urlPrefix: "www.otis.com" },
+  { name: "Schindler", urlPrefix: "www.schindler.com" },
+]
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const q = (req.query.q as string)?.trim()
   if (!q) return res.status(400).json({ error: "Query manquante" })
 
   const results: SupplierResult[] = []
-
-  console.log("🔹 Recherche pour:", q)
 
   const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY
   const GOOGLE_CX = process.env.GOOGLE_CX
@@ -44,45 +48,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}`
-    const response = await fetch(googleUrl)
-    const data = await response.json()
+    for (const supplier of FALLBACK_SUPPLIERS) {
+      const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}+site:${supplier.urlPrefix}`
+      const response = await fetch(searchUrl)
+      const data = await response.json()
 
-    if (data.error) {
-      console.warn("⚠️ Google API bloquée ou invalide:", data.error.message)
-      return res.status(500).json({ error: data.error.message })
+      if (data.items?.length) {
+        data.items.forEach((item: any) => {
+          const title = item.title || ""
+          const link = item.link || ""
+          const image = item.pagemap?.cse_image?.[0]?.src || null
+          const { score, exactMatch } = scoreMatch(title, q)
+          results.push({
+            supplier: supplier.name,
+            title,
+            description: title,
+            reference: title,
+            image,
+            fallbackImage: "/no-image.png",
+            link,
+            score,
+            exactMatch
+          })
+        })
+      }
     }
-
-    if (!data.items?.length) {
-      console.log("🔹 Aucun résultat Google pour:", q)
-      return res.status(200).json([])
-    }
-
-    data.items.forEach((item: any) => {
-      const title = item.title || ""
-      const link = item.link || ""
-      const image = item.pagemap?.cse_image?.[0]?.src || null
-      const { score, exactMatch } = scoreMatch(title, q)
-
-      results.push({
-        supplier: "Google",
-        title,
-        description: title,
-        reference: title,
-        image,
-        fallbackImage: "/no-image.png",
-        link,
-        score,
-        exactMatch
-      })
-    })
 
     results.sort((a, b) => b.score - a.score)
-    console.log(`🔹 Résultats finaux: ${results.length}`)
     return res.status(200).json(results)
 
   } catch (err) {
-    console.error("Google search error:", err)
-    return res.status(500).json({ error: "Erreur Google search" })
+    console.error("Google multi-supplier search error:", err)
+    return res.status(500).json({ error: "Erreur Google search multi-fournisseurs" })
   }
 }
