@@ -1,11 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next"
-import * as cheerio from "cheerio"
 
 type SupplierResult = {
   supplier: string
-  title: string | null
-  description: string | null
-  reference: string | null
+  title: string
+  description: string
+  reference: string
   image: string | null
   fallbackImage: string
   link: string
@@ -37,85 +36,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   console.log("🔹 Recherche pour:", q)
 
-  /* ====================== GOOGLE SEARCH (optionnel) ====================== */
   const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY
   const GOOGLE_CX = process.env.GOOGLE_CX
 
-  if (GOOGLE_API_KEY && GOOGLE_CX) {
-    try {
-      const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}`
-      const response = await fetch(googleUrl)
-      const data = await response.json()
-      if (data.error) {
-        console.warn("⚠️ Google API bloquée ou invalide:", data.error.message)
-      } else if (data.items?.length) {
-        let bestMatch: any = null
-        data.items.forEach((item: any) => {
-          const title = item.title || ""
-          const link = item.link || ""
-          const image = item.pagemap?.cse_image?.[0]?.src || null
-          const { score, exactMatch } = scoreMatch(title, q)
-          if (!bestMatch || score > bestMatch.score) bestMatch = { title, link, image, score, exactMatch }
-        })
-        if (bestMatch) results.push({
-          supplier: "Google",
-          title: bestMatch.title,
-          description: bestMatch.title,
-          reference: bestMatch.title,
-          image: bestMatch.image,
-          fallbackImage: "/no-image.png",
-          link: bestMatch.link,
-          score: bestMatch.score,
-          exactMatch: bestMatch.exactMatch
-        })
-      }
-    } catch (err) {
-      console.error("Google search error:", err)
-    }
-  } else {
-    console.log("⚠️ Google API key ou CX manquant, on utilise uniquement Sodimas")
+  if (!GOOGLE_API_KEY || !GOOGLE_CX) {
+    return res.status(500).json({ error: "Google API key ou CX manquant" })
   }
 
-  /* ====================== SODIMAS FALLBACK ====================== */
   try {
-    const searchUrl = `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`
-    const response = await fetch(searchUrl, { headers: { "User-Agent": "Mozilla/5.0" } })
-    const html = await response.text()
-    const $ = cheerio.load(html)
+    const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}`
+    const response = await fetch(googleUrl)
+    const data = await response.json()
 
-    // Sélecteur corrigé : uniquement les vrais produits
-    const productSelector = ".product-item"
-    let count = 0
+    if (data.error) {
+      console.warn("⚠️ Google API bloquée ou invalide:", data.error.message)
+      return res.status(500).json({ error: data.error.message })
+    }
 
-    $(productSelector).each((_, el) => {
-      const title = $(el).find(".product-title").text().trim()
-      const link = $(el).find("a").attr("href") || null
-      const image = $(el).find("img").attr("src") || null
+    if (!data.items?.length) {
+      console.log("🔹 Aucun résultat Google pour:", q)
+      return res.status(200).json([])
+    }
 
-      if (!title || !link) return
-
+    data.items.forEach((item: any) => {
+      const title = item.title || ""
+      const link = item.link || ""
+      const image = item.pagemap?.cse_image?.[0]?.src || null
       const { score, exactMatch } = scoreMatch(title, q)
-      count++
 
       results.push({
-        supplier: "Sodimas",
+        supplier: "Google",
         title,
         description: title,
         reference: title,
-        image: image ? (image.startsWith("http") ? image : `https://my.sodimas.com${image}`) : null,
-        fallbackImage: "https://my.sodimas.com/home/assets/img/com/logo.png",
-        link: link.startsWith("http") ? link : `https://my.sodimas.com${link}`,
+        image,
+        fallbackImage: "/no-image.png",
+        link,
         score,
         exactMatch
       })
     })
 
-    console.log(`🔹 Total produits Sodimas trouvés: ${count}`)
-  } catch (err) {
-    console.error("Sodimas scraping error:", err)
-  }
+    results.sort((a, b) => b.score - a.score)
+    console.log(`🔹 Résultats finaux: ${results.length}`)
+    return res.status(200).json(results)
 
-  results.sort((a, b) => b.score - a.score)
-  console.log("🔹 Résultats finaux:", results.length)
-  return res.status(200).json(results)
+  } catch (err) {
+    console.error("Google search error:", err)
+    return res.status(500).json({ error: "Erreur Google search" })
+  }
 }
