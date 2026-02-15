@@ -22,11 +22,10 @@ function scoreMatch(text: string, query: string) {
   const q = normalize(query)
   let score = 0
   let exactMatch = false
-
   if (t === q) { score += 50; exactMatch = true }
   if (t.startsWith(q)) score += 25
   if (t.includes(q)) score += 15
-  query.split(" ").forEach(word => { if(t.includes(normalize(word))) score += 4 })
+  query.split(" ").forEach(word => { if (t.includes(normalize(word))) score += 4 })
   return { score, exactMatch }
 }
 
@@ -40,21 +39,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   console.log("🔹 Recherche pour:", q)
 
-  /* ====================== GOOGLE SEARCH ====================== */
+  /* ====================== GOOGLE SEARCH (si clé server valide) ====================== */
   if(GOOGLE_API_KEY && GOOGLE_CX){
     try{
       const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}`
       const response = await fetch(googleUrl)
       const data = await response.json()
-      console.log("🔹 Google raw items:", data.items?.length)
-      if(data.items?.length){
+      
+      if(data.error){
+        console.warn("⚠️ Google API bloquée ou invalide, on passe au fallback Sodimas", data.error.message)
+      } else if(data.items?.length){
         let bestMatch:any = null
         data.items.forEach((item:any)=>{
           const title = item.title || ""
           const link = item.link || ""
           const image = item.pagemap?.cse_image?.[0]?.src || null
           const { score, exactMatch } = scoreMatch(title,q)
-          console.log("   - Google item:", title, score)
           if(!bestMatch || score>bestMatch.score) bestMatch={ title, link, image, score, exactMatch }
         })
         if(bestMatch) results.push({
@@ -73,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error("Google search error:", err)
     }
   } else {
-    console.log("⚠️ Google API key ou CX manquant")
+    console.log("⚠️ Google API key ou CX manquant, on utilise uniquement Sodimas")
   }
 
   /* ====================== SODIMAS FALLBACK ====================== */
@@ -83,8 +83,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const html = await response.text()
     const $ = cheerio.load(html)
 
-    console.log("🔹 Sodimas page length:", html.length)
-
     const productSelector = ".product-card, .product-item, .produit, .product"
     let bestMatch:any = null
     $(productSelector).each((_,el)=>{
@@ -93,7 +91,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const image = $(el).find("img").attr("src") || null
       if(!title || !link) return
       const { score, exactMatch } = scoreMatch(title,q)
-      console.log("   - Sodimas item:", title, score)
       if(!bestMatch || score>bestMatch.score) bestMatch={ 
         title,
         link: link.startsWith("http") ? link : `https://my.sodimas.com${link}`,
