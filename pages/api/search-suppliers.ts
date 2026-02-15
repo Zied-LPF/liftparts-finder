@@ -53,54 +53,55 @@ export default async function handler(
 
   /* ====================== GOOGLE SEARCH ====================== */
 
-  try {
-    const googleUrl =
-      `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}`
+  if (GOOGLE_API_KEY && GOOGLE_CX) {
+    try {
+      const googleUrl =
+        `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}`
 
-    const response = await fetch(googleUrl)
-    const data = await response.json()
+      const response = await fetch(googleUrl)
+      const data = await response.json()
 
-    if (data.items && data.items.length > 0) {
-      let bestMatch: any = null
+      if (data.items?.length) {
+        let bestMatch: any = null
 
-      data.items.forEach((item: any) => {
-        const title = item.title || ''
-        const link = item.link || ''
-        const image =
-          item.pagemap?.cse_image?.[0]?.src || null
+        data.items.forEach((item: any) => {
+          const title = item.title || ''
+          const link = item.link || ''
+          const image = item.pagemap?.cse_image?.[0]?.src || null
 
-        const { score, exactMatch } = scoreMatch(title, q)
+          const { score, exactMatch } = scoreMatch(title, q)
 
-        if (!bestMatch || score > bestMatch.score) {
-          bestMatch = {
-            title,
-            link,
-            image,
-            score,
-            exactMatch,
+          if (!bestMatch || score > bestMatch.score) {
+            bestMatch = {
+              title,
+              link,
+              image,
+              score,
+              exactMatch,
+            }
           }
-        }
-      })
-
-      if (bestMatch && bestMatch.score >= 15) {
-        results.push({
-          supplier: 'Google',
-          title: bestMatch.title,
-          description: bestMatch.title,
-          reference: bestMatch.title,
-          image: bestMatch.image,
-          fallbackImage: '/no-image.png',
-          link: bestMatch.link,
-          score: bestMatch.score,
-          exactMatch: bestMatch.exactMatch,
         })
+
+        if (bestMatch) {
+          results.push({
+            supplier: 'Google',
+            title: bestMatch.title,
+            description: bestMatch.title,
+            reference: bestMatch.title,
+            image: bestMatch.image,
+            fallbackImage: '/no-image.png',
+            link: bestMatch.link,
+            score: bestMatch.score,
+            exactMatch: bestMatch.exactMatch,
+          })
+        }
       }
+    } catch (err) {
+      console.error('Google error:', err)
     }
-  } catch (err) {
-    console.error('Google search error:', err)
   }
 
-  /* ====================== SODIMAS (FALLBACK SCRAPING) ====================== */
+  /* ====================== SODIMAS FALLBACK ====================== */
 
   if (results.length === 0) {
     try {
@@ -150,7 +151,7 @@ export default async function handler(
         }
       })
 
-      if (bestMatch && bestMatch.score >= 20) {
+      if (bestMatch) {
         results.push({
           supplier: 'Sodimas',
           title: bestMatch.title,
@@ -165,11 +166,9 @@ export default async function handler(
         })
       }
     } catch (err) {
-      console.error('Sodimas scraping error:', err)
+      console.error('Sodimas error:', err)
     }
   }
-
-  /* ====================== TRI GLOBAL ====================== */
 
   results.sort((a, b) => b.score - a.score)
 
