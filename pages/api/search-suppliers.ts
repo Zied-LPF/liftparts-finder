@@ -48,71 +48,125 @@ export default async function handler(
 
   const results: SupplierResult[] = []
 
-  /* ====================== SODIMAS (HTML SCRAPING) ====================== */
+  const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY
+  const GOOGLE_CX = process.env.GOOGLE_CX
+
+  /* ====================== GOOGLE SEARCH ====================== */
 
   try {
-    const searchUrl =
-      `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`
+    const googleUrl =
+      `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}`
 
-    const response = await fetch(searchUrl, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-      },
-    })
+    const response = await fetch(googleUrl)
+    const data = await response.json()
 
-    const html = await response.text()
-    const $ = cheerio.load(html)
+    if (data.items && data.items.length > 0) {
+      let bestMatch: any = null
 
-    let bestMatch: any = null
+      data.items.forEach((item: any) => {
+        const title = item.title || ''
+        const link = item.link || ''
+        const image =
+          item.pagemap?.cse_image?.[0]?.src || null
 
-    $('.product-item, .produit, .product').each((_, el) => {
-      const title =
-        $(el).find('.product-title, h2, h3').text().trim()
+        const { score, exactMatch } = scoreMatch(title, q)
 
-      const link =
-        $(el).find('a').attr('href') || null
-
-      const image =
-        $(el).find('img').attr('src') || null
-
-      if (!title || !link) return
-
-      const { score, exactMatch } = scoreMatch(title, q)
-
-      if (!bestMatch || score > bestMatch.score) {
-        bestMatch = {
-          title,
-          link: link.startsWith('http')
-            ? link
-            : `https://my.sodimas.com${link}`,
-          image: image
-            ? image.startsWith('http')
-              ? image
-              : `https://my.sodimas.com${image}`
-            : null,
-          score,
-          exactMatch,
+        if (!bestMatch || score > bestMatch.score) {
+          bestMatch = {
+            title,
+            link,
+            image,
+            score,
+            exactMatch,
+          }
         }
-      }
-    })
-
-    if (bestMatch && bestMatch.score >= 20) {
-      results.push({
-        supplier: 'Sodimas',
-        title: bestMatch.title,
-        description: bestMatch.title,
-        reference: bestMatch.title,
-        image: bestMatch.image,
-        fallbackImage:
-          'https://my.sodimas.com/home/assets/img/com/logo.png',
-        link: bestMatch.link,
-        score: bestMatch.score,
-        exactMatch: bestMatch.exactMatch,
       })
+
+      if (bestMatch && bestMatch.score >= 15) {
+        results.push({
+          supplier: 'Google',
+          title: bestMatch.title,
+          description: bestMatch.title,
+          reference: bestMatch.title,
+          image: bestMatch.image,
+          fallbackImage: '/no-image.png',
+          link: bestMatch.link,
+          score: bestMatch.score,
+          exactMatch: bestMatch.exactMatch,
+        })
+      }
     }
   } catch (err) {
-    console.error('Sodimas scraping error:', err)
+    console.error('Google search error:', err)
+  }
+
+  /* ====================== SODIMAS (FALLBACK SCRAPING) ====================== */
+
+  if (results.length === 0) {
+    try {
+      const searchUrl =
+        `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(q)}`
+
+      const response = await fetch(searchUrl, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        },
+      })
+
+      const html = await response.text()
+      const $ = cheerio.load(html)
+
+      let bestMatch: any = null
+
+      $('.product-item, .produit, .product').each((_, el) => {
+        const title =
+          $(el).find('.product-title, h2, h3').text().trim()
+
+        const link =
+          $(el).find('a').attr('href') || null
+
+        const image =
+          $(el).find('img').attr('src') || null
+
+        if (!title || !link) return
+
+        const { score, exactMatch } = scoreMatch(title, q)
+
+        if (!bestMatch || score > bestMatch.score) {
+          bestMatch = {
+            title,
+            link: link.startsWith('http')
+              ? link
+              : `https://my.sodimas.com${link}`,
+            image: image
+              ? image.startsWith('http')
+                ? image
+                : `https://my.sodimas.com${image}`
+              : null,
+            score,
+            exactMatch,
+          }
+        }
+      })
+
+      if (bestMatch && bestMatch.score >= 20) {
+        results.push({
+          supplier: 'Sodimas',
+          title: bestMatch.title,
+          description: bestMatch.title,
+          reference: bestMatch.title,
+          image: bestMatch.image,
+          fallbackImage:
+            'https://my.sodimas.com/home/assets/img/com/logo.png',
+          link: bestMatch.link,
+          score: bestMatch.score,
+          exactMatch: bestMatch.exactMatch,
+        })
+      }
+    } catch (err) {
+      console.error('Sodimas scraping error:', err)
+    }
   }
 
   /* ====================== TRI GLOBAL ====================== */
