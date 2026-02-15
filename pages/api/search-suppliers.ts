@@ -57,7 +57,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const results: SupplierResult[] = []
 
-  // ==================== Recherche fournisseurs en ligne ====================
   for (const supplier of suppliers) {
     try {
       const url = `${supplier.baseUrl}${encodeURIComponent(q)}`
@@ -67,19 +66,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       let bestMatch: any = null
 
-      // On prend les titres des produits visibles
+      // On ne prend que les textes qui contiennent explicitement le mot clé
       $("a, h2, h3, .product-title, .produit").each((_, el) => {
         const title = $(el).text().trim()
-        const link = $(el).attr("href") || url
         if (!title) return
 
         const { score, exactMatch } = scoreMatch(title, q)
-        if (!bestMatch || score > bestMatch.score) {
+        // Ne garder que si score > 0 (donc le mot clé est présent)
+        if (score > 0 && (!bestMatch || score > bestMatch.score)) {
+          const link = $(el).attr("href") || url
           bestMatch = { title, link, score, exactMatch }
         }
       })
 
-      if (bestMatch && bestMatch.score > 0) {
+      if (bestMatch) {
         results.push({
           supplier: supplier.name,
           title: bestMatch.title,
@@ -97,7 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // ==================== Recherche Google ====================
+  // Recherche Google
   const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY
   const GOOGLE_CX = process.env.GOOGLE_CX
 
@@ -128,8 +128,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // ==================== Tri par score ====================
   results.sort((a, b) => b.score - a.score)
-
   return res.status(200).json(results)
 }
