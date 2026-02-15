@@ -28,17 +28,17 @@ function scoreMatch(text: string, query: string) {
   return { score, exactMatch }
 }
 
-const FALLBACK_SUPPLIERS = [
-  { name: "Sodimas", urlPrefix: "my.sodimas.com" },
-  { name: "Otis", urlPrefix: "www.otis.com" },
-  { name: "Schindler", urlPrefix: "www.schindler.com" },
+// Liste des fournisseurs publics pour Google fallback
+const SUPPLIERS = [
+  { name: "Sodimas", site: "my.sodimas.com" },
+  { name: "Otis", site: "www.otis.com" },
+  { name: "Schindler", site: "www.schindler.com" },
+  { name: "Kone", site: "www.kone.com" },
 ]
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const q = (req.query.q as string)?.trim()
   if (!q) return res.status(400).json({ error: "Query manquante" })
-
-  const results: SupplierResult[] = []
 
   const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY
   const GOOGLE_CX = process.env.GOOGLE_CX
@@ -47,38 +47,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: "Google API key ou CX manquant" })
   }
 
+  const results: SupplierResult[] = []
+
+  console.log("🔹 Recherche pour:", q)
+
   try {
-    for (const supplier of FALLBACK_SUPPLIERS) {
-      const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}+site:${supplier.urlPrefix}`
-      const response = await fetch(searchUrl)
+    for (const supplier of SUPPLIERS) {
+      const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}+site:${supplier.site}`
+      const response = await fetch(googleUrl)
       const data = await response.json()
 
-      if (data.items?.length) {
-        data.items.forEach((item: any) => {
-          const title = item.title || ""
-          const link = item.link || ""
-          const image = item.pagemap?.cse_image?.[0]?.src || null
-          const { score, exactMatch } = scoreMatch(title, q)
-          results.push({
-            supplier: supplier.name,
-            title,
-            description: title,
-            reference: title,
-            image,
-            fallbackImage: "/no-image.png",
-            link,
-            score,
-            exactMatch
-          })
-        })
+      if (data.error) {
+        console.warn(`⚠️ Google API bloquée pour ${supplier.name}:`, data.error.message)
+        continue
       }
+
+      if (!data.items?.length) {
+        console.log(`🔹 Aucun résultat pour ${supplier.name}`)
+        continue
+      }
+
+      data.items.forEach((item: any) => {
+        const title = item.title || ""
+        const link = item.link || ""
+        const image = item.pagemap?.cse_image?.[0]?.src || null
+        const { score, exactMatch } = scoreMatch(title, q)
+        results.push({
+          supplier: supplier.name,
+          title,
+          description: title,
+          reference: title,
+          image,
+          fallbackImage: "/no-image.png",
+          link,
+          score,
+          exactMatch
+        })
+      })
     }
 
+    // Tri par score descendant
     results.sort((a, b) => b.score - a.score)
+    console.log(`🔹 Résultats finaux: ${results.length}`)
     return res.status(200).json(results)
 
   } catch (err) {
-    console.error("Google multi-supplier search error:", err)
+    console.error("Google multi-fournisseurs search error:", err)
     return res.status(500).json({ error: "Erreur Google search multi-fournisseurs" })
   }
 }
