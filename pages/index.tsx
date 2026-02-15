@@ -1,6 +1,5 @@
 'use client'
 import { useState } from "react"
-import { createWorker, PSM } from "tesseract.js"
 
 type Result = {
   supplier: string
@@ -15,7 +14,6 @@ type Result = {
 
 export default function Home() {
   const [query, setQuery] = useState("")
-  const [file, setFile] = useState<File | null>(null)
   const [results, setResults] = useState<Result[]>([])
   const [loading, setLoading] = useState(false)
   const [log, setLog] = useState<string[]>([])
@@ -47,29 +45,6 @@ export default function Home() {
     await fetchResults(query)
   }
 
-  const handleSearchImage = async () => {
-    if (!file) return
-    setLoading(true)
-    addLog(`🔹 OCR image en cours: ${file.name}`)
-    try {
-      const worker = await createWorker({ logger: m => addLog(JSON.stringify(m)) })
-      await worker.load()
-      await worker.loadLanguage("fra+eng")
-      await worker.initialize("fra+eng")
-      await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_BLOCK })
-      const { data: { text } } = await worker.recognize(file)
-      await worker.terminate()
-      const queryFromImage = text.trim()
-      addLog(`🔹 Texte OCR: "${queryFromImage}"`)
-      if (queryFromImage) await fetchResults(queryFromImage)
-      else setResults([])
-    } catch (err) {
-      addLog(`⚠️ OCR error: ${err}`)
-      setResults([])
-    }
-    setLoading(false)
-  }
-
   return (
     <div style={{ padding: 40, fontFamily: "Arial, sans-serif" }}>
       <h1 style={{ fontSize: 32, marginBottom: 20 }}>LiftParts Finder</h1>
@@ -88,16 +63,6 @@ export default function Home() {
           style={{ padding: "10px 15px", borderRadius: 5, background: "#0070f3", color: "#fff", border: "none", cursor: "pointer" }}
         >
           Rechercher
-        </button>
-      </div>
-
-      <div style={{ marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
-        <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] || null)} />
-        <button
-          onClick={handleSearchImage}
-          style={{ padding: "10px 15px", borderRadius: 5, background: "#0070f3", color: "#fff", border: "none", cursor: "pointer" }}
-        >
-          Recherche par image
         </button>
       </div>
 
@@ -124,7 +89,7 @@ export default function Home() {
             <div style={{ fontSize: 14, fontWeight: 600, color: "#0070f3" }}>{r.score}</div>
           </a>
         ))}
-        {!loading && results.length === 0 && (query || file) && <p>Aucun résultat trouvé</p>}
+        {!loading && results.length === 0 && query && <p>Aucun résultat trouvé</p>}
       </div>
 
       <div style={{ marginTop: 20, background: "#f0f0f0", padding: 10, borderRadius: 5 }}>
