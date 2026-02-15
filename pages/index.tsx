@@ -14,13 +14,13 @@ type Result = {
 }
 
 export default function Home() {
-  const [query,setQuery]=useState("")
-  const [file,setFile]=useState<File|null>(null)
-  const [results,setResults]=useState<Result[]>([])
-  const [loading,setLoading]=useState(false)
-  const [log,setLog]=useState<string[]>([])
+  const [query,setQuery] = useState("")
+  const [file,setFile] = useState<File|null>(null)
+  const [results,setResults] = useState<Result[]>([])
+  const [loading,setLoading] = useState(false)
+  const [log,setLog] = useState<string[]>([])
 
-  const addLog = (msg:string) => setLog(prev => [...prev,msg])
+  const addLog = (msg:string) => setLog(prev=>[...prev,msg])
 
   const fetchResults = async(q:string) => {
     setLoading(true)
@@ -40,10 +40,7 @@ export default function Home() {
     setLoading(false)
   }
 
-  const handleSearchText = async()=> {
-    if(!query) return
-    await fetchResults(query)
-  }
+  const handleSearchText = async()=> { if(!query) return; await fetchResults(query) }
 
   const handleSearchImage = async()=> {
     if(!file) return
@@ -64,8 +61,8 @@ export default function Home() {
     }catch(err){
       addLog(`⚠️ OCR error: ${err}`)
       setResults([])
-      setLoading(false)
     }
+    setLoading(false)
   }
 
   return (
