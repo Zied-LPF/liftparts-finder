@@ -1,4 +1,6 @@
+'use client'
 import { useState } from 'react'
+import { createWorker } from 'tesseract.js'
 
 type Result = { supplier: string; title: string; description: string; image: string | null; fallbackImage: string; link: string }
 
@@ -20,11 +22,23 @@ export default function Home() {
   const handleSearchImage = async () => {
     if (!file) return
     setLoading(true)
-    const formData = new FormData()
-    formData.append('image', file)
-    const res = await fetch('/api/search-image', { method: 'POST', body: formData })
+    const worker = createWorker()
+    await worker.load()
+    await worker.loadLanguage('fra+eng')
+    await worker.initialize('fra+eng')
+    const { data: { text } } = await worker.recognize(file)
+    await worker.terminate()
+
+    const queryFromImage = text.trim()
+    if (!queryFromImage) {
+      setResults([])
+      setLoading(false)
+      return
+    }
+
+    const res = await fetch(`/api/search-suppliers?q=${encodeURIComponent(queryFromImage)}`)
     const data = await res.json()
-    setResults(data.results || [])
+    setResults(data)
     setLoading(false)
   }
 

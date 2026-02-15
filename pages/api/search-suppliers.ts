@@ -55,19 +55,16 @@ export default async function handler(
   if (GOOGLE_API_KEY && GOOGLE_CX) {
     try {
       const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(q)}`
-
       const response = await fetch(googleUrl)
       const data = await response.json()
 
       if (data.items?.length) {
         let bestMatch: any = null
-
         data.items.forEach((item: any) => {
           const title = item.title || ''
           const link = item.link || ''
           const image = item.pagemap?.cse_image?.[0]?.src || null
           const { score, exactMatch } = scoreMatch(title, q)
-
           if (!bestMatch || score > bestMatch.score) {
             bestMatch = { title, link, image, score, exactMatch }
           }
