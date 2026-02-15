@@ -1,33 +1,30 @@
 import { useState } from 'react'
 
-type Result = {
-  supplier: string
-  title: string
-  description: string
-  image: string | null
-  fallbackImage: string
-  link: string
-}
+type Result = { supplier: string; title: string; description: string; image: string | null; fallbackImage: string; link: string }
 
 export default function Home() {
   const [query, setQuery] = useState('')
+  const [file, setFile] = useState<File | null>(null)
   const [results, setResults] = useState<Result[]>([])
   const [loading, setLoading] = useState(false)
 
-  const handleSearch = async () => {
+  const handleSearchText = async () => {
     if (!query) return
-
     setLoading(true)
+    const res = await fetch(`/api/search-suppliers?q=${encodeURIComponent(query)}`)
+    const data = await res.json()
+    setResults(data)
+    setLoading(false)
+  }
 
-    try {
-      const res = await fetch(`/api/search-suppliers?q=${encodeURIComponent(query)}`)
-      const data = await res.json()
-      setResults(data || [])
-    } catch (err) {
-      console.error(err)
-      setResults([])
-    }
-
+  const handleSearchImage = async () => {
+    if (!file) return
+    setLoading(true)
+    const formData = new FormData()
+    formData.append('image', file)
+    const res = await fetch('/api/search-image', { method: 'POST', body: formData })
+    const data = await res.json()
+    setResults(data.results || [])
     setLoading(false)
   }
 
@@ -35,34 +32,27 @@ export default function Home() {
     <div style={{ padding: 40 }}>
       <h1>LiftParts Finder</h1>
 
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-        placeholder="Référence ou mot-clé..."
-        style={{ padding: 10, width: 300 }}
-      />
+      <div style={{ marginBottom: 20 }}>
+        <input type="text" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearchText()} placeholder="Référence ou mot-clé..." style={{ padding: 10, width: 300 }} />
+        <button onClick={handleSearchText} style={{ marginLeft: 10 }}>Rechercher</button>
+      </div>
 
-      <button onClick={handleSearch} style={{ marginLeft: 10 }}>
-        Rechercher
-      </button>
+      <div style={{ marginBottom: 20 }}>
+        <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] || null)} />
+        <button onClick={handleSearchImage} style={{ marginLeft: 10 }}>Recherche par image</button>
+      </div>
 
       {loading && <p>Recherche en cours...</p>}
 
       {results.map((r, i) => (
-        <div key={i} style={{ marginTop: 30 }}>
+        <div key={i} style={{ marginTop: 20 }}>
           <h3>{r.supplier}</h3>
           <p>{r.title}</p>
-          <a href={r.link} target="_blank">
-            Voir produit
-          </a>
+          <a href={r.link} target="_blank">Voir produit</a>
         </div>
       ))}
 
-      {!loading && results.length === 0 && query && (
-        <p>Aucun résultat trouvé</p>
-      )}
+      {!loading && results.length === 0 && (query || file) && <p>Aucun résultat trouvé</p>}
     </div>
   )
 }
