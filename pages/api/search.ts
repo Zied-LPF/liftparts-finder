@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js"
 import { fetchMgti } from "@/lib/connectors/mgti"
 import { fetchSodica } from "@/lib/connectors/sodica"
 import { fetchMySodimas } from "@/lib/connectors/mysodimas"
+import { fetchDoofinder } from "@/lib/connectors/doofinder"
 import { SupplierResult } from "@/lib/types"
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -29,11 +30,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       source: "Supabase",
     }))
 
-    // 2️⃣ Recherche connecteurs live
-    const [mgtiParts, sodicaParts, mySodimasParts] = await Promise.all([
+    // 2️⃣ Recherche connecteurs HTML + Doofinder
+    const [mgtiParts, sodicaParts, mySodimasParts, doofinderParts] = await Promise.all([
       fetchMgti(q),
       fetchSodica(q),
       fetchMySodimas(q),
+      fetchDoofinder(q),
     ])
 
     // 3️⃣ Fusionner tout
@@ -42,6 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...mgtiParts,
       ...sodicaParts,
       ...mySodimasParts,
+      ...doofinderParts,
     ]
 
     // 4️⃣ Scoring flexible
