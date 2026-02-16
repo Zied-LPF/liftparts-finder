@@ -9,3 +9,20 @@ export type SupplierResult = {
   source?: string
   score?: number
 }
+
+export type Part = {
+  id: string
+  name: string
+  reference: string
+  brand: string
+  category: string | null
+  notes: string | null
+  favorite_supplier_id?: string
+  created_at?: string
+  is_favorite?: boolean
+  images?: string[] | null
+  link: string
+  supplier: string
+  title: string
+  price: number
+}

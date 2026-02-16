@@ -1,4 +1,3 @@
-// lib/connectors/doofinder.ts
 import fetch from "node-fetch"
 import { SupplierResult } from "../types"
 
@@ -6,28 +5,17 @@ const HASHID = process.env.NEXT_PUBLIC_DOOFINDER_HASHID
 const API_KEY = process.env.NEXT_PUBLIC_DOOFINDER_API_KEY
 
 export async function fetchDoofinder(query: string): Promise<SupplierResult[]> {
-  if (!HASHID || !API_KEY) {
-    console.warn("⚠️ Doofinder non configuré")
-    return []
-  }
+  if (!HASHID || !API_KEY) return []
 
-  const url = `https://api.doofinder.com/v2/search/${HASHID}?q=${encodeURIComponent(query)}`
-  const res = await fetch(url, {
-    headers: {
-      "Authorization": `Token ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
+  const res = await fetch(`https://api.doofinder.com/v2/search/${HASHID}?q=${encodeURIComponent(query)}`, {
+    headers: { "Authorization": `Token ${API_KEY}`, "Content-Type": "application/json" }
   })
 
-  if (!res.ok) {
-    console.error("❌ Erreur Doofinder", res.statusText)
-    return []
-  }
+  if (!res.ok) return []
 
   const data = await res.json()
   const results: SupplierResult[] = []
 
-  // Doofinder retourne "records" avec "title" et "url"
   if (data?.records) {
     data.records.forEach((r: any) => {
       results.push({
