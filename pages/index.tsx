@@ -104,16 +104,16 @@ export default function Home() {
                     {item.image && (
                       <img
                         src={item.image}
-                        alt={item.designation || item.label}
+                        alt={item.designation || item.title} // 🔹 corrigé label -> title
                         className="h-28 w-full object-contain mb-3"
                       />
                     )}
-                    <p className="font-semibold text-center mb-1">{item.designation || item.label}</p>
-                    {item.reference && <p className="text-gray-600 text-sm mb-1">Réf : {item.reference || item.ref}</p>}
+                    <p className="font-semibold text-center mb-1">{item.designation || item.title}</p> {/* 🔹 label -> title */}
+                    {item.reference && <p className="text-gray-600 text-sm mb-1">Réf : {item.reference}</p>} {/* 🔹 ref -> reference */}
                     {item.stock && <p className="text-green-600 text-sm mb-2">Stock : {item.stock}</p>}
-                    {(item.link || item.url) && (
+                    {item.link && (
                       <a
-                        href={item.link || item.url}
+                        href={item.link}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 transition text-sm"
