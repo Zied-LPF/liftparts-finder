@@ -36,13 +36,13 @@ export default function ResultCard({ results, supplierLogo }: ResultCardProps) {
             {item.image && (
               <img
                 src={item.image}
-                alt={item.designation}
+                alt={item.title || item.reference} // 🔹 correction
                 className="w-32 h-32 object-contain mb-2"
               />
             )}
 
             {/* Désignation */}
-            <p className="font-medium text-center">{item.designation}</p>
+            <p className="font-medium text-center">{item.title}</p> {/* 🔹 correction */}
 
             {/* Référence */}
             {item.reference && (

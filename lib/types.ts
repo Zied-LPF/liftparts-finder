@@ -5,13 +5,12 @@ export type SupplierResult = {
   title: string
   reference?: string
   link: string
-  price?: number
+  price?: number       // 🔹 number | undefined
   brand?: string
   source?: string
   score?: number
-  image?: string // 🔹 ajouté pour que ResultCard.tsx compile
-  designation?: string // 🔹 ajouté pour ResultCard
-  stock?: string // 🔹 ajouté pour ResultCard
+  image?: string      // 🔹 ajouté pour ResultCard
+  stock?: string      // 🔹 ajouté pour ResultCard
 }
 
 export type Part = {
