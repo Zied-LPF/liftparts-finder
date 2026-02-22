@@ -33,27 +33,32 @@ export default async function handler(
     const mgtiFormatted = mgtiResults.map((item: any) => ({
       supplier: 'MGTI',
       reference: item.ref || '',
-      designation: item.label || '',
+      title: item.label || item.ref || 'Produit MGTI', // 🔹 title obligatoire
+      designation: item.label || item.ref || 'Produit MGTI',
       stock: item.stock || '',
       link: item.url || '',
       source: 'MGTI',
       brand: item.brand || '',
-      image: item.image || '' // 🔹 conserver l'image
+      image: item.image || ''
     }))
 
-    // Sodica toujours en standby
+    // 🔹 Sodica temporairement désactivé pour le build
     const sodicaResults: SupplierResult[] = []
 
-    // 🔹 Combine tous les résultats
+    // 🔹 Combine tous les résultats avec fallback image et fallback title
     const combined: SupplierResult[] = [
-      ...sodimasResults,
-      ...mgtiFormatted,
+      ...sodimasResults.map(r => ({
+        ...r,
+        title: r.title || r.designation || 'Produit MySodimas',
+        image: r.image || '/logos/image-fallback.png'
+      })),
+      ...mgtiFormatted.map(r => ({
+        ...r,
+        title: r.title || r.designation || 'Produit MGTI',
+        image: r.image || '/logos/image-fallback.png'
+      })),
       ...sodicaResults
-    ].map(item => ({
-      ...item,
-      // 🔹 Fallback image si vide pour éviter carte cassée
-      image: item.image || '/logos/image-fallback.png'
-    }))
+    ]
 
     return res.status(200).json(combined)
   } catch (err: any) {
