@@ -11,6 +11,7 @@ export type SupplierResult = {
   score?: number
   image?: string // 🔹 ajouté pour que ResultCard.tsx compile
   designation?: string // 🔹 ajouté pour ResultCard
+  stock?: string // 🔹 ajouté pour ResultCard
 }
 
 export type Part = {
