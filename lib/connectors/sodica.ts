@@ -34,13 +34,13 @@ export async function searchSodica(query: string): Promise<SupplierResult[]> {
 
     items.forEach(item => {
       if (item.ref) {
-        results.push({
-          supplier: 'Sodica',
-          ref: item.ref,
-          title: item.title,
-          price: item.price,
-          url: item.url.startsWith('http') ? item.url : `https://sodica.fr${item.url}`
-        })
+       results.push({
+  supplier: 'Sodica',
+  reference: item.ref,
+  title: item.title,
+  price: item.price ? Number(item.price) : undefined, // 🔹 conversion string → number
+  url: item.url.startsWith('http') ? item.url : `https://sodica.fr${item.url}`
+})
       }
     })
   } catch (err) {
