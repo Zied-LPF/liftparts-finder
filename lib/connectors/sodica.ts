@@ -1,53 +1,40 @@
 // lib/connectors/sodica.ts
-import { chromium } from 'playwright'
-import { SupplierResult } from '../types'
+import type { SupplierResult } from '../types'
+import fetch from 'node-fetch'
 
-export async function searchSodica(query: string): Promise<SupplierResult[]> {
+export async function fetchSodicaParts(query: string): Promise<SupplierResult[]> {
+  const url = `https://www.sodica.fr/recherche?q=${encodeURIComponent(query)}`
+  const res = await fetch(url)
+  const html = await res.text()
+
+  // Parse HTML avec cheerio
+  const cheerio = await import('cheerio')
+  const $ = cheerio.load(html)
+
   const results: SupplierResult[] = []
-  const baseUrl = 'https://sodica.fr/search'
 
-  const browser = await chromium.launch({ headless: true })
-  const page = await browser.newPage()
+  $('.product-item').each((_, el) => {
+    const item = $(el)
 
-  try {
-    const url = `${baseUrl}?SearchTerm=${encodeURIComponent(query)}`
-    await page.goto(url, { waitUntil: 'domcontentloaded' })
+    const title = item.find('.product-title').text().trim()
+    const ref = item.find('.product-ref').text().trim()
+    const priceText = item.find('.product-price').text().replace(/[^\d.,]/g, '').replace(',', '.')
+    const price = priceText ? Number(priceText) : undefined
+    const link = item.find('a.product-link').attr('href') || ''
+    const image = item.find('img.product-image').attr('src') || undefined
+    const stock = item.find('.product-stock').text().trim() || undefined
 
-    // Attendre la présence des cartes produits (nouvelle structure DOM)
-    await page.waitForSelector('.card', { timeout: 15000 })
-
-    const items = await page.$$eval('.card', elems =>
-      elems.map(el => {
-        const refEl = el.querySelector('[data-ref]')
-        const titleEl = el.querySelector('.card-title')
-        const priceEl = el.querySelector('.price')
-        const linkEl = el.querySelector('a')
-
-        const ref = refEl?.textContent?.trim() || ''
-        const title = titleEl?.textContent?.trim() || ref
-        const price = priceEl?.textContent?.trim() || undefined
-        const url = linkEl?.getAttribute('href') || '#'
-
-        return { ref, title, price, url }
-      })
-    )
-
-    items.forEach(item => {
-      if (item.ref) {
-       results.push({
-  supplier: 'Sodica',
-  reference: item.ref,
-  title: item.title,
-  price: item.price ? Number(item.price) : undefined, // 🔹 conversion string → number
-  url: item.url.startsWith('http') ? item.url : `https://sodica.fr${item.url}`
-})
-      }
+    results.push({
+      supplier: 'Sodica',
+      reference: ref || undefined,
+      title,
+      price,
+      link: link.startsWith('http') ? link : `https://sodica.fr${link}`,
+      image,
+      stock,
+      designation: title
     })
-  } catch (err) {
-    console.error('Sodica Playwright error:', err)
-  } finally {
-    await browser.close()
-  }
+  })
 
   return results
 }
