@@ -1,7 +1,7 @@
 // scripts/indexAll.ts
 import 'dotenv/config'
 import { createClient } from '@supabase/supabase-js'
-import { fetchMgti } from "@/lib/connectors/mgti"
+import { scrapeMgti } from "../lib/connectors/mgti"
 import { fetchSodica } from "@/lib/connectors/sodica"
 import { fetchMySodimas } from "@/lib/connectors/mysodimas"
 import { fetchDoofinder } from "@/lib/connectors/doofinder"

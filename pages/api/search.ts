@@ -1,46 +1,63 @@
 // pages/api/search.ts
-import type { NextApiRequest, NextApiResponse } from "next"
-import { createClient } from "@supabase/supabase-js"
-import { fetchMgti } from "@/lib/connectors/mgti"
-import { fetchSodica } from "@/lib/connectors/sodica"
-import { fetchMySodimas } from "@/lib/connectors/mysodimas"
-import { fetchDoofinder } from "@/lib/connectors/doofinder"
-import { scorePart } from "@/lib/scoring"
-import { SupplierResult } from "@/lib/types"
+import type { NextApiRequest, NextApiResponse } from 'next'
+import { searchMySodimas } from '../../lib/connectors/mysodimas'
+import { scrapeMgti } from '../../lib/connectors/mgti'
+import type { SupplierResult } from '../../lib/types'
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<SupplierResult[] | { error: string }>
+) {
+  const query = req.query.q as string
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { q } = req.query
-  if (!q || typeof q !== "string") return res.status(400).json({ error: "Query manquante" })
+  if (!query || typeof query !== 'string') {
+    return res.status(400).json({ error: 'Missing query parameter q' })
+  }
+
+  console.log('API search start for query:', query)
 
   try {
-    const { data: localParts } = await supabase.from("parts").select("*").ilike("title", `%${q}%`)
-    const supabaseResults: SupplierResult[] = (localParts || []).map(p => ({
-      supplier: p.supplier,
-      title: p.title,
-      reference: p.reference,
-      link: p.link,
-      price: p.price,
-      brand: p.brand,
-      source: "Supabase",
+    // 🔹 MySodimas results
+    const sodimasResults = await searchMySodimas(query).catch(err => {
+      console.error('MySodimas error:', err)
+      return [] as SupplierResult[]
+    })
+
+    // 🔹 MGTI results
+    const mgtiResults = await scrapeMgti(query).catch(err => {
+      console.error('MGTI error:', err)
+      return [] as SupplierResult[]
+    })
+
+    // 🔹 Formatage MGTI pour correspondre à l'UI
+    const mgtiFormatted = mgtiResults.map((item: any) => ({
+      supplier: 'MGTI',
+      reference: item.ref || '',
+      designation: item.label || '',
+      stock: item.stock || '',
+      link: item.url || '',
+      source: 'MGTI',
+      brand: item.brand || '',
+      image: item.image || '' // 🔹 conserver l'image
     }))
 
-    const [mgtiParts, sodicaParts, mySodimasParts, doofinderParts] = await Promise.all([
-      fetchMgti(q), fetchSodica(q), fetchMySodimas(q), fetchDoofinder(q)
-    ])
+    // Sodica toujours en standby
+    const sodicaResults: SupplierResult[] = []
 
-    const results: SupplierResult[] = [
-      ...supabaseResults,
-      ...mgtiParts, ...sodicaParts, ...mySodimasParts, ...doofinderParts
-    ]
+    // 🔹 Combine tous les résultats
+    const combined: SupplierResult[] = [
+      ...sodimasResults,
+      ...mgtiFormatted,
+      ...sodicaResults
+    ].map(item => ({
+      ...item,
+      // 🔹 Fallback image si vide pour éviter carte cassée
+      image: item.image || '/logos/image-fallback.png'
+    }))
 
-    results.forEach(r => r.score = scorePart(r, q))
-    results.sort((a,b) => (b.score || 0) - (a.score || 0))
-
-    res.json({ results })
-  } catch(err) {
-    console.error(err)
-    res.status(500).json({ error: "Erreur serveur" })
+    return res.status(200).json(combined)
+  } catch (err: any) {
+    console.error('API search global error:', err)
+    return res.status(500).json({ error: 'Internal server error' })
   }
 }

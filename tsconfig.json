@@ -1,21 +1,24 @@
 {
   "compilerOptions": {
+    "target": "ES2022",             // cible moderne pour Node 24+
+    "module": "commonjs",           // compatible node require()
+    "outDir": "dist",               // JS compilé ira dans dist/
+    "rootDir": ".",                  // source à partir de la racine du projet
     "lib": [
       "dom",
       "dom.iterable",
       "esnext"
     ],
     "allowJs": true,
-    "skipLibCheck": true,
-    "strict": false,
-    "noEmit": true,
-    "incremental": true,
-    "module": "esnext",
     "esModuleInterop": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve"
+    "strict": true,
+    "skipLibCheck": true,
+    "incremental": true,
+    "jsx": "preserve",
+    "noEmit": false                  // on veut générer le JS
   },
   "include": [
     "next-env.d.ts",

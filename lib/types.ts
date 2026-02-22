@@ -20,7 +20,7 @@ export type Part = {
   favorite_supplier_id?: string
   created_at?: string
   is_favorite?: boolean
-  images?: string[] | null
+  images?: string
   link: string
   supplier: string
   title: string

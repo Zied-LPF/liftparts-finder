@@ -1,19 +1,62 @@
-import fetch from "node-fetch"
-import * as cheerio from "cheerio"
-import { SupplierResult } from "../types"
+// lib/connectors/mysodimas.ts
+import type { SupplierResult } from '../types'
 
-export async function fetchMySodimas(query: string): Promise<SupplierResult[]> {
-  const url = `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(query)}`
-  const html = await (await fetch(url)).text()
-  const $ = cheerio.load(html)
-  const results: SupplierResult[] = []
+export async function searchMySodimas(query: string): Promise<SupplierResult[]> {
 
-  $(".listing .product-card").each((i, el) => {
-    const title = $(el).find(".product-title").text().trim()
-    const link  = $(el).find("a").attr("href") || ""
-    const ref   = $(el).find(".product-ref").text().trim()
-    results.push({ supplier: "MySodimas", title, reference: ref || title, link })
+  function cleanStock(html: string): string {
+    if (!html) return ''
+    return html
+      .replace(/<[^>]*>/g, '')   // supprime toutes les balises
+      .replace(/\s+/g, ' ')      // supprime espaces multiples
+      .trim()
+  }  
+
+  const url = new URL('https://my.sodimas.com/index.cfm')
+  url.searchParams.set('action', 'search.jsonList')
+  url.searchParams.set('filtrePrincipal', 'searchstring')
+  url.searchParams.set('filtrePrincipalValue', query)
+  url.searchParams.set('searchstring', query)
+  url.searchParams.set('draw', '1')
+  url.searchParams.set('start', '0')
+  url.searchParams.set('length', '50')
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    }
   })
 
-  return results
+  if (!res.ok) {
+    throw new Error(`Sodimas API error: ${res.status}`)
+  }
+
+  const json = await res.json()
+  if (!json.data || !Array.isArray(json.data)) return []
+
+  return json.data.map((item: any) => {
+    const ref = item.ref || ''
+
+    // 🔹 Lien correct vers la recherche MySodimas
+    const link = `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(ref || query)}`
+
+    // 🔹 Image absolue sécurisée
+    const image = item.image
+      ? `https://my.sodimas.com${item.image.startsWith('/') ? '' : '/'}${item.image}`
+      : ''
+
+    // 🔹 Vérification URL image
+    console.log('Sodimas image URL:', image)
+
+    return {
+      reference: ref,
+      designation: item.designation?.trim() || '',
+      stock: cleanStock(item.stock),
+      supplier: 'MySodimas',
+      link,
+      source: 'MySodimas',
+      brand: item.brand?.trim() || '',
+      image
+    }
+  })
 }

@@ -1,19 +1,53 @@
-import fetch from "node-fetch"
-import * as cheerio from "cheerio"
-import { SupplierResult } from "../types"
+// lib/connectors/sodica.ts
+import { chromium } from 'playwright'
+import { SupplierResult } from '../types'
 
-export async function fetchSodica(query: string): Promise<SupplierResult[]> {
-  const url = `https://www.sodica.fr/fr/search?SearchTerm=${encodeURIComponent(query)}`
-  const html = await (await fetch(url)).text()
-  const $ = cheerio.load(html)
+export async function searchSodica(query: string): Promise<SupplierResult[]> {
   const results: SupplierResult[] = []
+  const baseUrl = 'https://sodica.fr/search'
 
-  $(".product-list .product").each((i, el) => {
-    const title = $(el).find(".product-name").text().trim()
-    const link  = $(el).find(".product-name a").attr("href") || ""
-    const ref   = $(el).find(".product-ref").text().trim()
-    results.push({ supplier: "Sodica", title, reference: ref || title, link })
-  })
+  const browser = await chromium.launch({ headless: true })
+  const page = await browser.newPage()
+
+  try {
+    const url = `${baseUrl}?SearchTerm=${encodeURIComponent(query)}`
+    await page.goto(url, { waitUntil: 'domcontentloaded' })
+
+    // Attendre la présence des cartes produits (nouvelle structure DOM)
+    await page.waitForSelector('.card', { timeout: 15000 })
+
+    const items = await page.$$eval('.card', elems =>
+      elems.map(el => {
+        const refEl = el.querySelector('[data-ref]')
+        const titleEl = el.querySelector('.card-title')
+        const priceEl = el.querySelector('.price')
+        const linkEl = el.querySelector('a')
+
+        const ref = refEl?.textContent?.trim() || ''
+        const title = titleEl?.textContent?.trim() || ref
+        const price = priceEl?.textContent?.trim() || undefined
+        const url = linkEl?.getAttribute('href') || '#'
+
+        return { ref, title, price, url }
+      })
+    )
+
+    items.forEach(item => {
+      if (item.ref) {
+        results.push({
+          supplier: 'Sodica',
+          ref: item.ref,
+          title: item.title,
+          price: item.price,
+          url: item.url.startsWith('http') ? item.url : `https://sodica.fr${item.url}`
+        })
+      }
+    })
+  } catch (err) {
+    console.error('Sodica Playwright error:', err)
+  } finally {
+    await browser.close()
+  }
 
   return results
 }

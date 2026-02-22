@@ -1,33 +1,26 @@
-import fetch from "node-fetch"
-import { SupplierResult } from "../types"
+import type { SupplierResult } from '../types.ts'
 
-const HASHID = process.env.NEXT_PUBLIC_DOOFINDER_HASHID
-const API_KEY = process.env.NEXT_PUBLIC_DOOFINDER_API_KEY
+const HASHID = process.env.NEXT_PUBLIC_DOOFINDER_HASHID!
+const API_KEY = process.env.NEXT_PUBLIC_DOOFINDER_API_KEY!
 
-export async function fetchDoofinder(query: string): Promise<SupplierResult[]> {
-  if (!HASHID || !API_KEY) return []
-
-  const res = await fetch(`https://api.doofinder.com/v2/search/${HASHID}?q=${encodeURIComponent(query)}`, {
-    headers: { "Authorization": `Token ${API_KEY}`, "Content-Type": "application/json" }
-  })
-
-  if (!res.ok) return []
-
+export async function scrapeDoofinder(query: string): Promise<SupplierResult[]> {
+  const url = `https://apiv2.doofinder.com/search/${HASHID}/query/${encodeURIComponent(query)}?key=${API_KEY}`
+  const res = await fetch(url)
   const data = await res.json()
   const results: SupplierResult[] = []
 
-  if (data?.records) {
-    data.records.forEach((r: any) => {
+  if (Array.isArray(data.records)) {
+    for (const r of data.records) {
       results.push({
-        supplier: r.supplier || "Doofinder",
         title: r.title,
         reference: r.reference || r.title,
+        brand: r.brand || '',
+        supplier: r.supplier || 'Doofinder',
         link: r.url,
-        price: r.price,
-        brand: r.brand,
-        source: "Doofinder",
+        price: r.price || 0,
+        source: 'Doofinder'
       })
-    })
+    }
   }
 
   return results
