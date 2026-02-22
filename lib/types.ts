@@ -1,4 +1,5 @@
 // lib/types.ts
+
 export type SupplierResult = {
   supplier: string
   title: string
@@ -8,6 +9,7 @@ export type SupplierResult = {
   brand?: string
   source?: string
   score?: number
+  image?: string // 🔹 ajouté pour que ResultCard.tsx compile
 }
 
 export type Part = {
