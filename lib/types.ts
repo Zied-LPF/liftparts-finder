@@ -10,6 +10,7 @@ export type SupplierResult = {
   source?: string
   score?: number
   image?: string // 🔹 ajouté pour que ResultCard.tsx compile
+  designation?: string // 🔹 ajouté pour ResultCard
 }
 
 export type Part = {
