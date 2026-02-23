@@ -5,9 +5,12 @@ import { scrapeMgti } from "../lib/connectors/mgti"
 import { fetchSodica } from "../lib/connectors/sodica"
 import { searchMySodimas } from "../lib/connectors/mysodimas"
 import { scrapeDoofinder } from "../lib/connectors/doofinder"
-import { SupplierResult } from "../lib/types"
+import type { SupplierResult } from "../lib/types"
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 async function upsertPart(r: SupplierResult) {
   await supabase.from("parts").upsert({
@@ -18,7 +21,7 @@ async function upsertPart(r: SupplierResult) {
     price: r.price || 0,
     brand: r.brand || "",
     name: r.title,
- }, { onConflict: "reference,supplier" })
+  }, { onConflict: "reference,supplier" }) // correction Supabase v2
 }
 
 async function indexAll(query: string) {
@@ -31,12 +34,13 @@ async function indexAll(query: string) {
     scrapeDoofinder(query)
   ])
 
-  const allResults: SupplierResult[] = [
+  // Cast final pour TypeScript afin d'éviter les erreurs de type
+  const allResults = [
     ...mgtiParts,
     ...sodicaParts,
     ...mySodimasParts,
     ...doofinderParts
-  ]
+  ].filter(r => r.title && r.link) as SupplierResult[]
 
   console.log(`➡️ ${allResults.length} items trouvés`)
 
