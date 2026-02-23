@@ -4,6 +4,11 @@ import { searchMySodimas } from '../../lib/connectors/mysodimas'
 import { scrapeMgti } from '../../lib/connectors/mgti'
 import type { SupplierResult } from '../../lib/types'
 
+// Optionnel : User-Agent pour éviter certains blocages serveur
+const DEFAULT_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36'
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<SupplierResult[] | { error: string }>
@@ -22,27 +27,33 @@ export default async function handler(
       console.error('MySodimas error:', err)
       return [] as SupplierResult[]
     })
+    console.log('MySodimas results count:', sodimasResults.length)
 
     // 🔹 MGTI results
-    const mgtiResults = await scrapeMgti(query).catch(err => {
+    let mgtiResults: any[] = []
+    try {
+      mgtiResults = await scrapeMgti(query, { headers: DEFAULT_HEADERS })
+      console.log('Raw MGTI results count:', mgtiResults.length)
+      mgtiResults.forEach((item, i) => console.log(`MGTI[${i}]`, item))
+    } catch (err) {
       console.error('MGTI error:', err)
-      return [] as SupplierResult[]
-    })
+      mgtiResults = []
+    }
 
     // 🔹 Formatage MGTI pour correspondre à l'UI
-    const mgtiFormatted = mgtiResults.map((item: any) => ({
+    const mgtiFormatted: SupplierResult[] = mgtiResults.map((item: any) => ({
       supplier: 'MGTI',
       reference: item.ref || '',
-      title: item.label || item.ref || 'Produit MGTI', // 🔹 title obligatoire
+      title: item.label || item.ref || 'Produit MGTI',
       designation: item.label || item.ref || 'Produit MGTI',
       stock: item.stock || '',
       link: item.url || '',
       source: 'MGTI',
       brand: item.brand || '',
-      image: item.image || ''
+      image: item.image || '/logos/image-fallback.png'
     }))
 
-    // 🔹 Sodica temporairement désactivé pour le build
+    // 🔹 Sodica temporairement désactivé
     const sodicaResults: SupplierResult[] = []
 
     // 🔹 Combine tous les résultats avec fallback image et fallback title
@@ -52,14 +63,11 @@ export default async function handler(
         title: r.title || r.designation || 'Produit MySodimas',
         image: r.image || '/logos/image-fallback.png'
       })),
-      ...mgtiFormatted.map(r => ({
-        ...r,
-        title: r.title || r.designation || 'Produit MGTI',
-        image: r.image || '/logos/image-fallback.png'
-      })),
+      ...mgtiFormatted,
       ...sodicaResults
     ]
 
+    console.log(`Total combined results: ${combined.length}`)
     return res.status(200).json(combined)
   } catch (err: any) {
     console.error('API search global error:', err)
