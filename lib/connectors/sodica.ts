@@ -2,12 +2,11 @@
 import type { SupplierResult } from '../types'
 import fetch from 'node-fetch'
 
-export async function fetchSodicaParts(query: string): Promise<SupplierResult[]> {
+export async function fetchSodica(query: string): Promise<SupplierResult[]> {
   const url = `https://www.sodica.fr/recherche?q=${encodeURIComponent(query)}`
   const res = await fetch(url)
   const html = await res.text()
 
-  // Parse HTML avec cheerio
   const cheerio = await import('cheerio')
   const $ = cheerio.load(html)
 
