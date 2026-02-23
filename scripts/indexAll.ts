@@ -28,7 +28,7 @@ async function indexAll(query: string) {
     scrapeMgti(query),
     fetchSodica(query),
     searchMySodimas(query),
-    fetchDoofinder(query)
+    scrapeDoofinder(query)
   ])
 
   const allResults: SupplierResult[] = [
