@@ -3,7 +3,7 @@ import 'dotenv/config'
 import { createClient } from '@supabase/supabase-js'
 import { scrapeMgti } from "../lib/connectors/mgti"
 import { fetchSodica } from "../lib/connectors/sodica"
-import { fetchMySodimas } from "../lib/connectors/mysodimas"
+import { searchMySodimas } from "../lib/connectors/mysodimas"
 import { fetchDoofinder } from "../lib/connectors/doofinder"
 import { SupplierResult } from "../lib/types"
 
@@ -23,17 +23,36 @@ async function upsertPart(r: SupplierResult) {
 
 async function indexAll(query: string) {
   console.log(`⚡️ Indexation: ${query}`)
+
   const [mgtiParts, sodicaParts, mySodimasParts, doofinderParts] = await Promise.all([
-    fetchMgti(query), fetchSodica(query), fetchMySodimas(query), fetchDoofinder(query)
+    scrapeMgti(query),
+    fetchSodica(query),
+    searchMySodimas(query),
+    fetchDoofinder(query)
   ])
-  const allResults: SupplierResult[] = [...mgtiParts, ...sodicaParts, ...mySodimasParts, ...doofinderParts]
+
+  const allResults: SupplierResult[] = [
+    ...mgtiParts,
+    ...sodicaParts,
+    ...mySodimasParts,
+    ...doofinderParts
+  ]
+
   console.log(`➡️ ${allResults.length} items trouvés`)
-  for(const r of allResults) await upsertPart(r)
+
+  for (const r of allResults) {
+    await upsertPart(r)
+  }
+
   console.log("✅ Indexation terminée")
 }
 
 const queries = ["motor","gear","pulley"]
+
 async function main() {
-  for(const q of queries) await indexAll(q)
+  for (const q of queries) {
+    await indexAll(q)
+  }
 }
+
 main()
