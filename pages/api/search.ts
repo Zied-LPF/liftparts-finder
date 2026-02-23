@@ -4,11 +4,6 @@ import { searchMySodimas } from '../../lib/connectors/mysodimas'
 import { scrapeMgti } from '../../lib/connectors/mgti'
 import type { SupplierResult } from '../../lib/types'
 
-// Optionnel : User-Agent pour éviter certains blocages serveur
-const DEFAULT_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36'
-}
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<SupplierResult[] | { error: string }>
@@ -32,7 +27,7 @@ export default async function handler(
     // 🔹 MGTI results
     let mgtiResults: any[] = []
     try {
-      mgtiResults = await scrapeMgti(query, { headers: DEFAULT_HEADERS })
+      mgtiResults = await scrapeMgti(query)
       console.log('Raw MGTI results count:', mgtiResults.length)
       mgtiResults.forEach((item, i) => console.log(`MGTI[${i}]`, item))
     } catch (err) {
