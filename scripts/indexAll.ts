@@ -18,7 +18,7 @@ async function upsertPart(r: SupplierResult) {
     price: r.price || 0,
     brand: r.brand || "",
     name: r.title,
-  }, { onConflict: ["reference", "supplier"] })
+ }, { onConflict: "reference,supplier" })
 }
 
 async function indexAll(query: string) {
