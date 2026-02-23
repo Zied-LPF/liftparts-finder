@@ -1,4 +1,6 @@
 // pages/index.tsx
+"use client"
+
 import { useState } from 'react'
 import type { SupplierResult } from '../lib/types'
 
@@ -104,12 +106,12 @@ export default function Home() {
                     {item.image && (
                       <img
                         src={item.image}
-                        alt={item.designation || item.title} // 🔹 corrigé label -> title
+                        alt={item.designation || item.title}
                         className="h-28 w-full object-contain mb-3"
                       />
                     )}
-                    <p className="font-semibold text-center mb-1">{item.designation || item.title}</p> {/* 🔹 label -> title */}
-                    {item.reference && <p className="text-gray-600 text-sm mb-1">Réf : {item.reference}</p>} {/* 🔹 ref -> reference */}
+                    <p className="font-semibold text-center mb-1">{item.designation || item.title}</p>
+                    {item.reference && <p className="text-gray-600 text-sm mb-1">Réf : {item.reference}</p>}
                     {item.stock && <p className="text-green-600 text-sm mb-2">Stock : {item.stock}</p>}
                     {item.link && (
                       <a
