@@ -2,10 +2,10 @@
 import 'dotenv/config'
 import { createClient } from '@supabase/supabase-js'
 import { scrapeMgti } from "../lib/connectors/mgti"
-import { fetchSodica } from "@/lib/connectors/sodica"
-import { fetchMySodimas } from "@/lib/connectors/mysodimas"
-import { fetchDoofinder } from "@/lib/connectors/doofinder"
-import { SupplierResult } from "@/lib/types"
+import { fetchSodica } from "../lib/connectors/sodica"
+import { fetchMySodimas } from "../lib/connectors/mysodimas"
+import { fetchDoofinder } from "../lib/connectors/doofinder"
+import { SupplierResult } from "../lib/types"
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
