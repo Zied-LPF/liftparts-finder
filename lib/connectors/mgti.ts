@@ -28,25 +28,34 @@ export async function scrapeMgti(searchText: string): Promise<SupplierResult[]> 
   const results: SupplierResult[] = []
 
   $("a.oxcell").each((_, el) => {
+    const product = $(el)
+
+    // ✅ Référence SKU correcte
     const ref =
-      $(el).find(".c-cs-product-display__cell-inner").text().trim() || ""
+      product
+        .find(".c-cs-product-display__cell-inner.is-sku")
+        .first()
+        .text()
+        .trim() || ""
 
-    const label = $(el).find(".PBItemName").text().trim()
+    const label =
+      product.find(".PBItemName").text().trim() || ""
 
-    const href = $(el).attr("href") || ""
+    const href = product.attr("href") || ""
     const fullUrl = href.startsWith("http")
       ? href
       : `https://www.mgti.fr/${href.replace(/^\//, "")}`
 
-    const imgSrc = $(el).find("img.smallImg").attr("src") || ""
+    const imgSrc = product.find("img.smallImg").attr("src") || ""
     const image = imgSrc
       ? `https://www.mgti.fr/${imgSrc.replace(/^\//, "")}`
       : ""
 
-    const stock = $(el)
-      .find(".PBMsgInStock, .PBMsgStockLvl")
-      .text()
-      .trim()
+    const stock =
+      product
+        .find(".PBMsgInStock, .PBMsgStockLvl")
+        .text()
+        .trim() || ""
 
     if (label) {
       results.push({
