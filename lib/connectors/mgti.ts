@@ -10,13 +10,15 @@ export interface SupplierResult {
 }
 
 export async function scrapeMgti(searchText: string): Promise<SupplierResult[]> {
-  const url = `https://www.mgti.fr/PBSearch.asp?ActionID=1&CCode=2&SearchPageIdx=1&SCShowPriceZero=1&SearchExtra=&SearchText=${encodeURIComponent(searchText)}&SearchMode=1`
+  const url = `https://www.mgti.fr/PBSearch.asp?ActionID=1&CCode=2&SearchPageIdx=1&SCShowPriceZero=1&SearchExtra=&SearchText=${encodeURIComponent(
+    searchText
+  )}&SearchMode=1`
 
   const res = await fetch(url, {
     headers: {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115 Safari/537.36",
-      "Accept":
+      Accept:
         "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8"
     }
@@ -27,30 +29,38 @@ export async function scrapeMgti(searchText: string): Promise<SupplierResult[]> 
 
   const results: SupplierResult[] = []
 
-  // 🔥 On boucle sur les lignes produits
-  $("tr").each((_, row) => {
-    const product = $(row)
+  // 🔎 Chaque bloc produit réel
+  $("div.PBItem").each((_, product) => {
+    const p = $(product)
 
-    const ref = product
-      .find(".c-cs-product-display__cell-inner.is-sku")
-      .text()
-      .trim()
+    // ✅ Référence (HTML serveur fiable)
+    let ref = ""
+    const skuText = p.find(".PBItemSku .PBShortTxt").text().trim()
 
-    const label = product.find(".PBItemName").text().trim()
+    if (skuText) {
+      ref = skuText
+        .replace(/Référence/i, "")
+        .replace(":", "")
+        .trim()
+    }
 
-    const linkElement = product.find("a.oxcell").first()
-    const href = linkElement.attr("href") || ""
+    // ✅ Désignation
+    const label = p.find(".PBItemName").text().trim()
 
+    // ✅ Lien produit
+    const href = p.find("a").attr("href") || ""
     const fullUrl = href.startsWith("http")
       ? href
       : `https://www.mgti.fr/${href.replace(/^\//, "")}`
 
-    const imgSrc = product.find("img.smallImg").attr("src") || ""
+    // ✅ Image
+    const imgSrc = p.find("img.smallImg").attr("src") || ""
     const image = imgSrc
       ? `https://www.mgti.fr/${imgSrc.replace(/^\//, "")}`
       : ""
 
-    const stock = product
+    // ✅ Stock
+    const stock = p
       .find(".PBMsgInStock, .PBMsgStockLvl")
       .text()
       .trim()
