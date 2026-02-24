@@ -30,16 +30,16 @@ export async function scrapeMgti(searchText: string): Promise<SupplierResult[]> 
   $("a.oxcell").each((_, el) => {
     const product = $(el)
 
-    // ✅ Référence SKU correcte
-    const ref =
-      product
-        .find(".c-cs-product-display__cell-inner.is-sku")
-        .first()
-        .text()
-        .trim() || ""
+    // ✅ Référence robuste (prend le premier SKU trouvé)
+    let ref = ""
+    product.find(".c-cs-product-display__cell-inner").each((_, skuEl) => {
+      const text = $(skuEl).text().trim()
+      if (text && !ref) {
+        ref = text
+      }
+    })
 
-    const label =
-      product.find(".PBItemName").text().trim() || ""
+    const label = product.find(".PBItemName").text().trim() || ""
 
     const href = product.attr("href") || ""
     const fullUrl = href.startsWith("http")
