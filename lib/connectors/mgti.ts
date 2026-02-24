@@ -10,44 +10,45 @@ export interface SupplierResult {
 }
 
 export async function scrapeMgti(searchText: string): Promise<SupplierResult[]> {
-  const url = `https://www.mgti.fr/PBSearch.asp?ActionID=1&CCode=2&SearchPageIdx=1&SCShowPriceZero=1&SearchExtra=&SearchText=${encodeURIComponent(
-    searchText
-  )}&SearchMode=1`
+  const url = `https://www.mgti.fr/PBSearch.asp?ActionID=1&CCode=2&SearchPageIdx=1&SCShowPriceZero=1&SearchExtra=&SearchText=${encodeURIComponent(searchText)}&SearchMode=1`
 
   const res = await fetch(url, {
     headers: {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115 Safari/537.36",
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept":
+        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8"
     }
   })
 
   const html = await res.text()
   const $ = cheerio.load(html)
+
   const results: SupplierResult[] = []
 
   $("a.oxcell").each((_, el) => {
-    const $el = $(el)
+    const label = $(el).find(".PBItemName").text().trim()
 
-    // 🔹 Référence: cherche le premier div avec c-cs-product-display__cell-inner contenant is-sku
+    // 🔹 Nouvelle extraction correcte de la référence
     let ref = ""
-    $el.find("div.c-cs-product-display__cell-inner.is-sku").each((_, r) => {
-      const text = $(r).text().trim()
-      if (text) ref = text
-    })
+    const refDiv = $(el).find(".c-cs-product-display__cell-inner.is-sku.ng-binding")
+    if (refDiv.length) {
+      ref = refDiv.first().text().trim()
+    }
 
-    const label = $el.find(".PBItemName").text().trim()
-
-    const href = $el.attr("href") || ""
+    const href = $(el).attr("href") || ""
     const fullUrl = href.startsWith("http")
       ? href
       : `https://www.mgti.fr/${href.replace(/^\//, "")}`
 
-    const imgSrc = $el.find("img.smallImg").attr("src") || ""
+    const imgSrc = $(el).find("img.smallImg").attr("src") || ""
     const image = imgSrc ? `https://www.mgti.fr/${imgSrc.replace(/^\//, "")}` : ""
 
-    const stock = $el.find(".PBMsgInStock, .PBMsgStockLvl").text().trim()
+    const stock = $(el)
+      .find(".PBMsgInStock, .PBMsgStockLvl")
+      .text()
+      .trim()
 
     if (label) {
       results.push({
