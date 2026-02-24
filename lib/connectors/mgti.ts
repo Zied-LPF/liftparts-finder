@@ -1,4 +1,4 @@
-import { chromium } from "playwright"
+import * as cheerio from "cheerio"
 
 export interface SupplierResult {
   supplier: string
@@ -10,82 +10,55 @@ export interface SupplierResult {
 }
 
 export async function scrapeMgti(searchText: string): Promise<SupplierResult[]> {
-  const browser = await chromium.launch({
-    headless: true
+  const url = `https://www.mgti.fr/PBSearch.asp?ActionID=1&CCode=2&SearchPageIdx=1&SCShowPriceZero=1&SearchExtra=&SearchText=${encodeURIComponent(searchText)}&SearchMode=1`
+
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115 Safari/537.36",
+      "Accept":
+        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8"
+    }
   })
 
-  const page = await browser.newPage()
+  const html = await res.text()
+  const $ = cheerio.load(html)
 
-  const url = `https://www.mgti.fr/PBSearch.asp?ActionID=1&CCode=2&ShowSMImg=1&SearchText=${encodeURIComponent(searchText)}`
+  const results: SupplierResult[] = []
 
-  await page.goto(url, { waitUntil: "domcontentloaded" })
+  $("a.oxcell").each((_, el) => {
+    const ref =
+      $(el).find(".c-cs-product-display__cell-inner").text().trim() || ""
 
-  try {
-    await page.waitForSelector("a.oxcell", { timeout: 15000 })
-  } catch {
-    await browser.close()
-    return []
-  }
+    const label = $(el).find(".PBItemName").text().trim()
 
-  const results = await page.evaluate(() => {
-    const items: any[] = []
-    const products = document.querySelectorAll("a.oxcell")
+    const href = $(el).attr("href") || ""
+    const fullUrl = href.startsWith("http")
+      ? href
+      : `https://www.mgti.fr/${href.replace(/^\//, "")}`
 
-    products.forEach(product => {
-      // 🔹 Référence (parfois dans petit texte en haut)
-      const ref =
-        product.querySelector(".PBRef")?.textContent?.trim() ||
-        product.querySelector(".c-cs-product-display__cell-inner")
-          ?.textContent?.trim() ||
-        ""
+    const imgSrc = $(el).find("img.smallImg").attr("src") || ""
+    const image = imgSrc
+      ? `https://www.mgti.fr/${imgSrc.replace(/^\//, "")}`
+      : ""
 
-      // 🔹 Désignation
-      const label =
-        product.querySelector(".PBItemName")
-          ?.textContent?.trim() || ""
+    const stock = $(el)
+      .find(".PBMsgInStock, .PBMsgStockLvl")
+      .text()
+      .trim()
 
-      // 🔹 URL
-      const href = product.getAttribute("href") || ""
-      const fullUrl = href.startsWith("http")
-        ? href
-        : `https://www.mgti.fr/${href.replace(/^\//, "")}`
-
-      // 🔹 Image (src OU data-src)
-      const imgElement = product.querySelector("img")
-      let imgSrc =
-        imgElement?.getAttribute("src") ||
-        imgElement?.getAttribute("data-src") ||
-        ""
-
-      let image = ""
-      if (imgSrc && imgSrc !== "/" && imgSrc.trim() !== "") {
-        image = imgSrc.startsWith("http")
-          ? imgSrc
-          : `https://www.mgti.fr/${imgSrc.replace(/^\//, "")}`
-      }
-
-      // 🔹 Stock (souvent dans un span spécifique)
-      const stock =
-        product.querySelector(".PBStock")?.textContent?.trim() ||
-        product.querySelector(".availability")?.textContent?.trim() ||
-        ""
-
-      if (label) {
-        items.push({
-          supplier: "MGTI",
-          ref,
-          label,
-          url: fullUrl,
-          image,
-          stock
-        })
-      }
-    })
-
-    return items
+    if (label) {
+      results.push({
+        supplier: "MGTI",
+        ref,
+        label,
+        url: fullUrl,
+        image,
+        stock
+      })
+    }
   })
-
-  await browser.close()
 
   return results
 }
