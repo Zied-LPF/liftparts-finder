@@ -27,37 +27,20 @@ export async function scrapeMgti(searchText: string): Promise<SupplierResult[]> 
 
   const results: SupplierResult[] = []
 
-  $("a.oxcell").each((_, el) => {
-    const product = $(el)
+  // 🔥 On boucle sur les lignes produits
+  $("tr").each((_, row) => {
+    const product = $(row)
 
-    // ✅ PRIORITÉ 1 : bloc Référence officiel
-    let ref = product.find(".PBItemSku").text().trim()
+    const ref = product
+      .find(".c-cs-product-display__cell-inner.is-sku")
+      .text()
+      .trim()
 
-    if (ref) {
-      ref = ref.replace(/Référence\s*:\s*/i, "").trim()
-    }
+    const label = product.find(".PBItemName").text().trim()
 
-    // ✅ PRIORITÉ 2 : SKU Angular
-    if (!ref) {
-      ref = product
-        .find(".c-cs-product-display__cell-inner")
-        .first()
-        .text()
-        .trim()
-    }
+    const linkElement = product.find("a.oxcell").first()
+    const href = linkElement.attr("href") || ""
 
-    // ✅ PRIORITÉ 3 : extraction regex secours
-    if (!ref) {
-      const rawText = product.text()
-      const match = rawText.match(/Référence\s*:\s*([0-9]+)/i)
-      if (match) {
-        ref = match[1]
-      }
-    }
-
-    const label = product.find(".PBItemName").text().trim() || ""
-
-    const href = product.attr("href") || ""
     const fullUrl = href.startsWith("http")
       ? href
       : `https://www.mgti.fr/${href.replace(/^\//, "")}`
@@ -67,11 +50,10 @@ export async function scrapeMgti(searchText: string): Promise<SupplierResult[]> 
       ? `https://www.mgti.fr/${imgSrc.replace(/^\//, "")}`
       : ""
 
-    const stock =
-      product
-        .find(".PBMsgInStock, .PBMsgStockLvl")
-        .text()
-        .trim() || ""
+    const stock = product
+      .find(".PBMsgInStock, .PBMsgStockLvl")
+      .text()
+      .trim()
 
     if (label) {
       results.push({
