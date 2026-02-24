@@ -1,7 +1,6 @@
-// pages/api/search.ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { searchMySodimas } from '../../lib/connectors/mysodimas'
-import { scrapeMgti } from '../../lib/connectors/mgti'
+import { scrapeMgti, SupplierResult as MgtiResult } from '../../lib/connectors/mgti'
 import type { SupplierResult } from '../../lib/types'
 
 export default async function handler(
@@ -22,21 +21,15 @@ export default async function handler(
       console.error('MySodimas error:', err)
       return [] as SupplierResult[]
     })
-    console.log('MySodimas results count:', sodimasResults.length)
 
     // 🔹 MGTI results
-    let mgtiResults: any[] = []
-    try {
-      mgtiResults = await scrapeMgti(query)
-      console.log('Raw MGTI results count:', mgtiResults.length)
-      mgtiResults.forEach((item, i) => console.log(`MGTI[${i}]`, item))
-    } catch (err) {
+    const mgtiRaw: MgtiResult[] = await scrapeMgti(query).catch(err => {
       console.error('MGTI error:', err)
-      mgtiResults = []
-    }
+      return []
+    })
 
-    // 🔹 Formatage MGTI pour correspondre à l'UI
-    const mgtiFormatted: SupplierResult[] = mgtiResults.map((item: any) => ({
+    // 🔹 Formatage MGTI pour l'UI (title, designation, reference)
+    const mgtiResults: SupplierResult[] = mgtiRaw.map(item => ({
       supplier: 'MGTI',
       reference: item.ref || '',
       title: item.label || item.ref || 'Produit MGTI',
@@ -44,25 +37,24 @@ export default async function handler(
       stock: item.stock || '',
       link: item.url || '',
       source: 'MGTI',
-      brand: item.brand || '',
+      brand: '', // on ne récupère pas de brand actuellement
       image: item.image || '/logos/image-fallback.png'
     }))
 
-    // 🔹 Sodica temporairement désactivé
+    // 🔹 Sodica standby
     const sodicaResults: SupplierResult[] = []
 
-    // 🔹 Combine tous les résultats avec fallback image et fallback title
+    // 🔹 Combine tous les résultats
     const combined: SupplierResult[] = [
       ...sodimasResults.map(r => ({
         ...r,
         title: r.title || r.designation || 'Produit MySodimas',
         image: r.image || '/logos/image-fallback.png'
       })),
-      ...mgtiFormatted,
+      ...mgtiResults,
       ...sodicaResults
     ]
 
-    console.log(`Total combined results: ${combined.length}`)
     return res.status(200).json(combined)
   } catch (err: any) {
     console.error('API search global error:', err)
