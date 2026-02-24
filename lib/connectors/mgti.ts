@@ -29,41 +29,31 @@ export async function scrapeMgti(searchText: string): Promise<SupplierResult[]> 
 
   const results: SupplierResult[] = []
 
-  // 🔎 Chaque bloc produit réel
-  $("div.PBItem").each((_, product) => {
-    const p = $(product)
+  $("a.oxcell").each((_, el) => {
+    const a = $(el)
 
-    // ✅ Référence (HTML serveur fiable)
-    let ref = ""
-    const skuText = p.find(".PBItemSku .PBShortTxt").text().trim()
+    // 🔹 Référence
+    const ref = a
+      .find("div.c-cs-product-display__cell-inner")
+      .first()
+      .text()
+      .trim()
 
-    if (skuText) {
-      ref = skuText
-        .replace(/Référence/i, "")
-        .replace(":", "")
-        .trim()
-    }
+    // 🔹 Désignation
+    const label = a.find(".PBItemName").text().trim()
 
-    // ✅ Désignation
-    const label = p.find(".PBItemName").text().trim()
-
-    // ✅ Lien produit
-    const href = p.find("a").attr("href") || ""
+    // 🔹 Lien
+    const href = a.attr("href") || ""
     const fullUrl = href.startsWith("http")
       ? href
       : `https://www.mgti.fr/${href.replace(/^\//, "")}`
 
-    // ✅ Image
-    const imgSrc = p.find("img.smallImg").attr("src") || ""
-    const image = imgSrc
-      ? `https://www.mgti.fr/${imgSrc.replace(/^\//, "")}`
-      : ""
+    // 🔹 Image
+    const imgSrc = a.find("img.smallImg").attr("src") || ""
+    const image = imgSrc ? `https://www.mgti.fr/${imgSrc.replace(/^\//, "")}` : ""
 
-    // ✅ Stock
-    const stock = p
-      .find(".PBMsgInStock, .PBMsgStockLvl")
-      .text()
-      .trim()
+    // 🔹 Stock
+    const stock = a.find(".PBMsgInStock, .PBMsgStockLvl").text().trim()
 
     if (label) {
       results.push({
