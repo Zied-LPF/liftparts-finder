@@ -9,7 +9,7 @@ export async function searchMySodimas(query: string): Promise<SupplierResult[]> 
       .replace(/<[^>]*>/g, '')   // supprime toutes les balises
       .replace(/\s+/g, ' ')      // supprime espaces multiples
       .trim()
-  }  
+  }
 
   const url = new URL('https://my.sodimas.com/index.cfm')
   url.searchParams.set('action', 'search.jsonList')
@@ -37,15 +37,14 @@ export async function searchMySodimas(query: string): Promise<SupplierResult[]> 
   return json.data.map((item: any) => {
     const ref = item.ref || ''
 
-    // 🔹 Lien correct vers la recherche MySodimas
+    // 🔹 Lien vers recherche MySodimas
     const link = `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(ref || query)}`
 
-    // 🔹 Image absolue sécurisée
-    const image = item.image
-      ? `https://my.sodimas.com${item.image.startsWith('/') ? '' : '/'}${item.image}`
+    // 🔥 Construction image basée sur référence numérique
+    const image = ref
+      ? `https://my.sodimas.com/data/produits/thumbnail/dt/${ref}.jpg`
       : ''
 
-    // 🔹 Vérification URL image
     console.log('Sodimas image URL:', image)
 
     return {
