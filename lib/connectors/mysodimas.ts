@@ -45,7 +45,7 @@ export async function searchMySodimas(query: string): Promise<SupplierResult[]> 
 
     const totalFiltered = json.recordsFiltered ?? null
 
-    // Stop conditions
+    // Conditions d'arrêt
     if (json.data.length < PAGE_SIZE) {
       hasMore = false
     } else if (totalFiltered && allItems.length >= totalFiltered) {
@@ -54,7 +54,7 @@ export async function searchMySodimas(query: string): Promise<SupplierResult[]> 
       start += PAGE_SIZE
     }
 
-    // Sécurité anti-boucle infinie
+    // Sécurité anti-boucle infinie (max 500 résultats)
     if (start >= 500) {
       hasMore = false
     }
@@ -62,6 +62,7 @@ export async function searchMySodimas(query: string): Promise<SupplierResult[]> 
 
   return allItems.map((item: any) => {
     const ref = item.ref || ''
+    const designation = item.designation?.trim() || ''
 
     const link = `https://my.sodimas.com/fr/recherche?searchstring=${encodeURIComponent(ref || query)}`
 
@@ -71,7 +72,8 @@ export async function searchMySodimas(query: string): Promise<SupplierResult[]> 
 
     return {
       reference: ref,
-      designation: item.designation?.trim() || '',
+      title: designation, // ✅ obligatoire pour SupplierResult
+      designation: designation,
       stock: cleanStock(item.stock),
       supplier: 'MySodimas',
       link,
