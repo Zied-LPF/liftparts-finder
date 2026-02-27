@@ -1,3 +1,5 @@
+// lib/connectors/mgti.ts
+
 import * as cheerio from "cheerio"
 
 export interface SupplierResult {
@@ -9,58 +11,66 @@ export interface SupplierResult {
   stock?: string
 }
 
-export async function scrapeMgti(searchText: string): Promise<SupplierResult[]> {
-  const url = `https://www.mgti.fr/PBSearch.asp?ActionID=1&CCode=2&SearchPageIdx=1&SCShowPriceZero=1&SearchExtra=&SearchText=${encodeURIComponent(searchText)}&SearchMode=1`
+export async function scrapeMgti(
+  searchText: string
+): Promise<SupplierResult[]> {
+  try {
+    const url = `https://www.mgti.fr/PBSearch.asp?ActionID=1&CCode=2&ShowSMImg=1&SearchText=${encodeURIComponent(
+      searchText
+    )}&SearchMode=1`
 
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115 Safari/537.36",
-      "Accept":
-        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8"
-    }
-  })
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145 Safari/537.36",
+        "Accept-Language": "fr-FR,fr;q=0.9"
+      }
+    })
 
-  const html = await res.text()
-  const $ = cheerio.load(html)
+    const html = await response.text()
 
-  const results: SupplierResult[] = []
+    const $ = cheerio.load(html)
+    const results: SupplierResult[] = []
 
-  $("a.oxcell").each((_, el) => {
-    const label = $(el).find(".PBItemName").text().trim()
+    $("a.oxcell").each((_, el) => {
+      const label = $(el).find(".PBItemName").text().trim()
 
-    // 🔹 Nouvelle extraction correcte de la référence
-    let ref = ""
-    const refDiv = $(el).find(".c-cs-product-display__cell-inner.is-sku.ng-binding")
-    if (refDiv.length) {
-      ref = refDiv.first().text().trim()
-    }
+      const ref =
+        $(el).find(".PBItemDesc").text().trim() ||
+        $(el).find(".PBItemCode").text().trim()
 
-    const href = $(el).attr("href") || ""
-    const fullUrl = href.startsWith("http")
-      ? href
-      : `https://www.mgti.fr/${href.replace(/^\//, "")}`
+      const href = $(el).attr("href") || ""
+      const fullUrl = href.startsWith("http")
+        ? href
+        : `https://www.mgti.fr/${href.replace(/^\//, "")}`
 
-    const imgSrc = $(el).find("img.smallImg").attr("src") || ""
-    const image = imgSrc ? `https://www.mgti.fr/${imgSrc.replace(/^\//, "")}` : ""
+      const imgSrc = $(el).find("img").attr("src") || ""
+      const image = imgSrc
+        ? `https://www.mgti.fr/${imgSrc.replace(/^\//, "")}`
+        : ""
 
-    const stock = $(el)
-      .find(".PBMsgInStock, .PBMsgStockLvl")
-      .text()
-      .trim()
+      const stock = $(el)
+        .find(".PBMsgInStock, .PBMsgStockLvl")
+        .text()
+        .trim()
 
-    if (label) {
-      results.push({
-        supplier: "MGTI",
-        ref,
-        label,
-        url: fullUrl,
-        image,
-        stock
-      })
-    }
-  })
+      if (label) {
+        results.push({
+          supplier: "MGTI",
+          ref,
+          label,
+          url: fullUrl,
+          image,
+          stock
+        })
+      }
+    })
 
-  return results
+    console.log("MGTI HTTP COUNT:", results.length)
+
+    return results
+  } catch (err) {
+    console.error("MGTI HTTP failed:", err)
+    return []
+  }
 }
