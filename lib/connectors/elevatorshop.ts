@@ -1,41 +1,50 @@
 // lib/connectors/elevatorshop.ts
-import puppeteer from 'puppeteer'
 import type { SupplierResult } from '../types'
 
+let puppeteer: typeof import('puppeteer') | typeof import('puppeteer-core')
+let executablePath: string | undefined
+let args: string[] | undefined
+let defaultViewport: any
+
 export async function searchElevatorshop(query: string): Promise<SupplierResult[]> {
+  // Chargement dynamique pour éviter l'erreur Next.js côté client
+  if (process.env.VERCEL) {
+    puppeteer = require('puppeteer-core')
+    const chromium = require('chrome-aws-lambda')
+    executablePath = await chromium.executablePath
+    args = chromium.args
+    defaultViewport = chromium.defaultViewport
+  } else {
+    puppeteer = require('puppeteer')
+    executablePath = undefined
+    args = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    defaultViewport = undefined
+  }
+
   const browser = await puppeteer.launch({
     headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage'
-    ]
+    args,
+    defaultViewport,
+    executablePath,
   })
 
   const page = await browser.newPage()
 
   try {
-    // Bloque les ressources inutiles pour accélérer
     await page.setRequestInterception(true)
     page.on('request', req => {
       const type = req.resourceType()
-      if (['stylesheet', 'font', 'media'].includes(type)) {
-        req.abort()
-      } else {
-        req.continue()
-      }
+      if (['stylesheet', 'font', 'media'].includes(type)) req.abort()
+      else req.continue()
     })
 
-    // Appel direct URL de recherche
     await page.goto(
       `https://www.elevatorshop.de/fr/search?search=${encodeURIComponent(query)}`,
       { waitUntil: 'domcontentloaded' }
     )
 
-    // Attend les produits
     await page.waitForSelector('.product-box', { timeout: 10000 })
 
-    // Scraping stable via evaluate
     const results = await page.evaluate(() => {
       const items = Array.from(document.querySelectorAll('.product-box'))
       return items.slice(0, 20).map(card => {
@@ -47,14 +56,12 @@ export async function searchElevatorshop(query: string): Promise<SupplierResult[
 
         const reference = refEl?.textContent?.match(/\d+/)?.[0] || ''
         const stock = stockEl?.textContent?.trim() || ''
-
-        // ✅ URL produit pour le front-end : renommé en `link`
         const link = linkEl?.href || titleEl?.href || (reference ? `https://www.elevatorshop.de/fr/search?search=${reference}` : '')
 
         return {
           supplier: 'ElevatorShop',
           title: titleEl?.textContent?.trim() || '',
-          link,          // <- ici le changement important
+          link,
           image: imgEl?.src || '',
           reference,
           stock
@@ -63,7 +70,6 @@ export async function searchElevatorshop(query: string): Promise<SupplierResult[
     })
 
     console.log('Elevatorshop parsed:', results.length)
-
     return results
   } catch (err) {
     console.error('Elevatorshop Puppeteer error:', err)
