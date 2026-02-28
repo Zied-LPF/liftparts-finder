@@ -1,5 +1,7 @@
+// pages/api/search.ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { searchMySodimas } from '../../lib/connectors/mysodimas'
+import { searchElevatorshop } from '../../lib/connectors/elevatorshop'
 import type { SupplierResult } from '../../lib/types'
 
 export default async function handler(
@@ -13,23 +15,29 @@ export default async function handler(
     return res.status(400).json({ error: 'Missing query parameter q' })
   }
 
-  console.log('API search start for query:', query)
+  console.log('API search start for query (Sodimas + Elevatorshop):', query)
 
   try {
-    // 🔹 MySodimas uniquement
-    const sodimasResults: SupplierResult[] =
-      (await searchMySodimas(query).catch(err => {
+    // 🔹 Lancement en parallèle, Sodimas reste intact
+    const [sodimasResults, elevatorshopResults] = await Promise.all([
+      searchMySodimas(query).catch(err => {
         console.error('MySodimas error:', err)
         return []
-      })) || []
+      }),
+      searchElevatorshop(query).catch(err => {
+        console.error('Elevatorshop error:', err)
+        return []
+      })
+    ])
 
     console.log('MySodimas count:', sodimasResults.length)
+    console.log('Elevatorshop count:', elevatorshopResults.length)
 
-    const combined: SupplierResult[] = sodimasResults.map(r => ({
-      ...r,
-      title: r.title || r.designation || 'Produit MySodimas',
-      image: r.image || '/logos/image-fallback.png'
-    }))
+    // 🔹 Fusion simple des résultats
+    const combined: SupplierResult[] = [
+      ...sodimasResults,
+      ...elevatorshopResults
+    ]
 
     console.log('TOTAL COMBINED:', combined.length)
 

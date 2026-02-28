@@ -1,27 +1,55 @@
-import type { SupplierResult } from '../types.ts'
+import type { SupplierResult } from '../types'
 
-const HASHID = process.env.NEXT_PUBLIC_DOOFINDER_HASHID!
-const API_KEY = process.env.NEXT_PUBLIC_DOOFINDER_API_KEY!
+const HAUER_HASHID = '5836afe245ee8e1cd4c7de5e0ccb1bdb'
 
-export async function scrapeDoofinder(query: string): Promise<SupplierResult[]> {
-  const url = `https://apiv2.doofinder.com/search/${HASHID}/query/${encodeURIComponent(query)}?key=${API_KEY}`
-  const res = await fetch(url)
-  const data = await res.json()
-  const results: SupplierResult[] = []
+export async function searchHauer(query: string): Promise<SupplierResult[]> {
+  try {
+    const url = `https://eu1-search.doofinder.com/5/search?hashid=${HAUER_HASHID}&query=${encodeURIComponent(
+      query
+    )}&rpp=20&page=1&transformer=basic`
 
-  if (Array.isArray(data.records)) {
-    for (const r of data.records) {
-      results.push({
-        title: r.title,
-        reference: r.reference || r.title,
-        brand: r.brand || '',
-        supplier: r.supplier || 'Doofinder',
-        link: r.url,
-        price: r.price || 0,
-        source: 'Doofinder'
-      })
+    const res = await fetch(url, {
+      headers: {
+        // User-Agent réaliste pour éviter le 403
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+        // Referrer pour imiter le navigateur
+        'Referer': 'https://www.elevatorshop.de/',
+        'Accept': 'application/json,text/plain,*/*'
+      }
+    })
+
+    if (!res.ok) {
+      console.error('Doofinder HTTP error:', res.status)
+      return []
     }
-  }
 
-  return results
+    const data = await res.json()
+
+    if (!data?.results || !Array.isArray(data.results)) {
+      return []
+    }
+
+    const results: SupplierResult[] = data.results.map((item: any) => ({
+      supplier: 'Hauer',
+      title: item.title || item.product_name || 'Produit Hauer',
+      designation: item.title || '',
+      brand: item.brand || '',
+      reference: item.reference || item.title || '',
+      url: item.link || item.url || '',
+      image:
+        item.image_link
+          ? item.image_link.startsWith('http')
+            ? item.image_link
+            : `https:${item.image_link}`
+          : '/logos/image-fallback.png',
+      price: item.price || null,
+      source: 'Doofinder'
+    }))
+
+    return results
+  } catch (err) {
+    console.error('Doofinder fetch error:', err)
+    return []
+  }
 }

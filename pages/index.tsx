@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import type { SupplierResult } from "../lib/types"
+import Search from "../components/Search"
 
 function getLogoForSupplier(supplier: string): string | undefined {
   switch (supplier) {
@@ -9,6 +10,8 @@ function getLogoForSupplier(supplier: string): string | undefined {
       return "/logos/mysodimas.png"
     case "MGTI":
       return "/logos/mgti.png"
+    case "ElevatorShop":
+      return "/logos/elevatorshop.png"  // ✅ nouveau logo ajouté
     default:
       return undefined
   }
@@ -20,6 +23,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [sortBy, setSortBy] = useState("pertinence")
   const [darkMode, setDarkMode] = useState(false)
+  const [activeSupplier, setActiveSupplier] = useState("") // ✅ fournisseur actif
 
   const handleSearch = async () => {
     if (!query) return
@@ -69,53 +73,39 @@ export default function Home() {
         {/* ================= HEADER ================= */}
         <header className="relative overflow-hidden">
 
-		{/* DARK MODE TOGGLE */}
-		<button
-		  onClick={() => setDarkMode(!darkMode)}
-		  className="absolute top-6 right-6 z-50"
-		>
-		  <div className="relative w-14 h-8 flex items-center 
-		                  bg-white/70 dark:bg-gray-800/70 
-		                  backdrop-blur-xl 
-		                  border border-white/40 dark:border-gray-700 
-		                  rounded-full shadow-md transition">
+          {/* DARK MODE TOGGLE */}
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className="absolute top-6 right-6 z-50"
+          >
+            <div className="relative w-14 h-8 flex items-center 
+                            bg-white/70 dark:bg-gray-800/70 
+                            backdrop-blur-xl 
+                            border border-white/40 dark:border-gray-700 
+                            rounded-full shadow-md transition">
 
-		    {/* Icône soleil */}
-		    <span className="absolute left-2 text-xs">☀️</span>
+              <span className="absolute left-2 text-xs">☀️</span>
+              <span className="absolute right-2 text-xs">🌙</span>
 
-		    {/* Icône lune */}
-		    <span className="absolute right-2 text-xs">🌙</span>
-
-		    {/* Knob */}
-		    <div
-		      className={`absolute top-1 left-1 w-6 h-6 
-		                  bg-white dark:bg-gray-900 
-		                  rounded-full shadow-md 
-		                  transform transition-transform duration-300
-		                  ${darkMode ? "translate-x-6" : "translate-x-0"}`}
-		    />
-		  </div>
-		</button>
+              <div
+                className={`absolute top-1 left-1 w-6 h-6 
+                            bg-white dark:bg-gray-900 
+                            rounded-full shadow-md 
+                            transform transition-transform duration-300
+                            ${darkMode ? "translate-x-6" : "translate-x-0"}`}
+              />
+            </div>
+          </button>
 
           {/* IMAGE DE FOND */}
           <div
             className="absolute inset-0 bg-cover bg-right"
-            style={{
-              backgroundImage: "url('/bg-elevator-lines.png')"
-            }}
+            style={{ backgroundImage: "url('/bg-elevator-lines.png')" }}
           />
-
-          {/* ASSOMBRISSEMENT POUR CONTRASTE */}
           <div className="absolute inset-0 bg-black/10 dark:bg-black/40" />
-
-          {/* GRADIENT LÉGER */}
           <div className="absolute inset-0 bg-gradient-to-r 
-            from-white/60 
-            via-white/40 
-            to-transparent 
-            dark:from-gray-900/80 
-            dark:via-gray-900/60 
-            dark:to-transparent" />
+            from-white/60 via-white/40 to-transparent 
+            dark:from-gray-900/80 dark:via-gray-900/60 dark:to-transparent" />
 
           {/* CONTENU */}
           <div className="relative max-w-6xl mx-auto px-6 py-16 flex flex-col items-center">
@@ -127,30 +117,15 @@ export default function Home() {
                 alt="LiftParts Finder"
                 className="h-52 w-auto"
               />
-
             </div>
 
-            {/* SEARCH CENTRÉE */}
-            <div className="w-full flex justify-center">
-              <div className="w-full max-w-2xl flex rounded-2xl overflow-hidden shadow-2xl backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border border-white/40 dark:border-gray-700">
-
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  placeholder="Rechercher une référence..."
-                  className="flex-1 px-6 py-4 bg-transparent focus:outline-none text-gray-800 dark:text-white placeholder-gray-500"
-                />
-
-                <button
-                  onClick={handleSearch}
-                  className="px-8 font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition"
-                >
-                  Rechercher
-                </button>
-              </div>
-            </div>
+            {/* ======= RECHERCHE AVEC Search.tsx ======= */}
+            <Search
+              query={query}
+              setQuery={setQuery}
+              handleSearch={handleSearch}
+              loading={loading}
+            />
 
             {/* TRI */}
             {results.length > 0 && (
@@ -185,88 +160,110 @@ export default function Home() {
             </p>
           )}
 
-          {Object.entries(groupedResults).map(([supplier, items]) => (
-            <div key={supplier} className="mb-16">
+         {/* ==== BOUTONS FILTRE FOURNISSEUR ==== */}
+{Object.keys(groupedResults).length > 0 && (
+  <div className="flex flex-wrap gap-4 mb-8 justify-center">
+    <button
+      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 shadow-sm border ${
+        !activeSupplier
+          ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-700 hover:from-blue-700 hover:to-indigo-700 shadow-md"
+          : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+      }`}
+      onClick={() => setActiveSupplier("")}
+    >
+      Tous ({results.length})
+    </button>
 
-              <div className="flex items-center gap-4 mb-6">
-                {getLogoForSupplier(supplier) && (
-                  <img
-                    src={getLogoForSupplier(supplier)}
-                    alt={supplier}
-                    className="h-8"
-                  />
-                )}
-                <span className="text-gray-500 dark:text-gray-400 text-sm">
-                  {items.length} résultat(s)
-                </span>
-              </div>
+    {Object.entries(groupedResults).map(([supplier, items]) => (
+      <button
+        key={supplier}
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 shadow-sm border ${
+          activeSupplier === supplier
+            ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-700 hover:from-blue-700 hover:to-indigo-700 shadow-md"
+            : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+        }`}
+        onClick={() => setActiveSupplier(supplier)}
+      >
+        {getLogoForSupplier(supplier) && (
+          <img src={getLogoForSupplier(supplier)} alt={supplier} className="h-6" />
+        )}
+        <span>{supplier} ({items.length})</span>
+      </button>
+    ))}
+  </div>
+)}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+          {/* ==== RESULTATS ==== */}
+          {Object.entries(groupedResults)
+            .filter(([supplier]) => !activeSupplier || activeSupplier === supplier)
+            .map(([supplier, items]) => (
+              <div key={supplier} className="mb-16">
 
-                {items.map((item, index) => (
-                  <div
-                    key={index}
-                    className="group bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col p-6 border border-gray-100 dark:border-gray-700"
-                  >
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
 
-                    <div className="h-44 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-xl mb-5">
-                      {item.image ? (
-                        <img
-                          src={item.image}
-                          alt={item.designation || item.title}
-                          className="max-h-32 object-contain transition-transform duration-300 group-hover:scale-110"
-                        />
-                      ) : (
-                        <div className="text-xs text-gray-400">
-                          Pas d'image
-                        </div>
-                      )}
-                    </div>
+                  {items.map((item, index) => (
+                    <div
+                      key={index}
+                      className="group bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col p-6 border border-gray-100 dark:border-gray-700"
+                    >
 
-                    <div className="flex flex-col flex-1">
-
-                      <h3 className="text-sm font-semibold text-gray-800 dark:text-white mb-3 line-clamp-2">
-                        {item.designation || item.title}
-                      </h3>
-
-                      {item.reference && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                          Réf : <span className="font-mono">{item.reference}</span>
-                        </p>
-                      )}
-
-                      {item.stock && (
-                        <p className="text-xs text-green-600 font-medium mb-3">
-                          {item.stock}
-                        </p>
-                      )}
-
-                      <div className="mb-5">
-                        <span className="inline-block text-xs px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium">
-                          {supplier}
-                        </span>
+                      <div className="h-44 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-xl mb-5">
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.designation || item.title}
+                            className="max-h-32 object-contain transition-transform duration-300 group-hover:scale-110"
+                          />
+                        ) : (
+                          <div className="text-xs text-gray-400">
+                            Pas d'image
+                          </div>
+                        )}
                       </div>
 
-                      {item.link && (
-                        <a
-                          href={item.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-auto text-center py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition"
-                        >
-                          Voir le produit
-                        </a>
-                      )}
+                      <div className="flex flex-col flex-1">
+
+                        <h3 className="text-sm font-semibold text-gray-800 dark:text-white mb-3 line-clamp-2">
+                          {item.designation || item.title}
+                        </h3>
+
+                        {item.reference && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            Réf : <span className="font-mono">{item.reference}</span>
+                          </p>
+                        )}
+
+                        {item.stock && (
+                          <p className="text-xs text-green-600 font-medium mb-3">
+                            {item.stock}
+                          </p>
+                        )}
+
+                        <div className="mb-5">
+                          <span className="inline-block text-xs px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium">
+                            {supplier}
+                          </span>
+                        </div>
+
+                        {item.link && (
+                          <a
+                            href={item.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-auto text-center py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition"
+                          >
+                            Voir le produit
+                          </a>
+                        )}
+
+                      </div>
 
                     </div>
+                  ))}
 
-                  </div>
-                ))}
-
+                </div>
               </div>
-            </div>
-          ))}
-
+            ))}
         </main>
       </div>
     </div>
