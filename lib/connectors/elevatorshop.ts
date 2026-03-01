@@ -1,4 +1,3 @@
-// lib/connectors/elevatorshop.ts
 import type { SupplierResult } from '../types'
 
 let puppeteer: typeof import('puppeteer') | typeof import('puppeteer-core')
@@ -7,7 +6,6 @@ let args: string[] | undefined
 let defaultViewport: any
 
 export async function searchElevatorshop(query: string): Promise<SupplierResult[]> {
-  // Chargement dynamique pour éviter l'erreur Next.js côté client
   if (process.env.VERCEL) {
     puppeteer = require('puppeteer-core')
     const chromium = require('chrome-aws-lambda')
@@ -32,8 +30,7 @@ export async function searchElevatorshop(query: string): Promise<SupplierResult[
 
   try {
     await page.setRequestInterception(true)
-    // ✅ Typage explicite pour résoudre l'erreur TS
-    page.on('request', (req: import('puppeteer').HTTPRequest) => {
+    page.on('request', (req) => {
       const type = req.resourceType()
       if (['stylesheet', 'font', 'media'].includes(type)) req.abort()
       else req.continue()
