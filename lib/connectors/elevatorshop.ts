@@ -32,7 +32,8 @@ export async function searchElevatorshop(query: string): Promise<SupplierResult[
 
   try {
     await page.setRequestInterception(true)
-    page.on('request', req => {
+    // ✅ Typage explicite pour résoudre l'erreur TS
+    page.on('request', (req: import('puppeteer').HTTPRequest) => {
       const type = req.resourceType()
       if (['stylesheet', 'font', 'media'].includes(type)) req.abort()
       else req.continue()
