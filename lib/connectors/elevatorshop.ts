@@ -8,8 +8,10 @@ let defaultViewport: any
 export async function searchElevatorshop(query: string): Promise<SupplierResult[]> {
   if (process.env.VERCEL) {
     puppeteer = require('puppeteer-core')
-    const chromium = require('chrome-aws-lambda')
-    executablePath = await chromium.executablePath
+
+    const chromium = require('@sparticuz/chromium')
+
+    executablePath = await chromium.executablePath()
     args = chromium.args
     defaultViewport = chromium.defaultViewport
   } else {
@@ -31,7 +33,6 @@ export async function searchElevatorshop(query: string): Promise<SupplierResult[
   try {
     await page.setRequestInterception(true)
 
-    // Fix union type issue
     ;(page as any).on('request', (req: any) => {
       const type = req.resourceType()
       if (['stylesheet', 'font', 'media'].includes(type)) req.abort()
@@ -45,7 +46,6 @@ export async function searchElevatorshop(query: string): Promise<SupplierResult[
 
     await page.waitForSelector('.product-box', { timeout: 10000 })
 
-    // 🔥 FIX définitif evaluate
     const results = await (page as any).evaluate(() => {
       const items = Array.from(document.querySelectorAll('.product-box'))
 
