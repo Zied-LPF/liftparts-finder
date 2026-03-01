@@ -34,7 +34,7 @@ export async function searchElevatorshop(query: string): Promise<SupplierResult[
       const type = req.resourceType()
       if (['stylesheet', 'font', 'media'].includes(type)) req.abort()
       else req.continue()
-     })
+    })
 
     await page.goto(
       `https://www.elevatorshop.de/fr/search?search=${encodeURIComponent(query)}`,
@@ -43,18 +43,24 @@ export async function searchElevatorshop(query: string): Promise<SupplierResult[
 
     await page.waitForSelector('.product-box', { timeout: 10000 })
 
-    const results = await page.evaluate(() => {
+    const results: SupplierResult[] = await page.evaluate((): SupplierResult[] => {
       const items = Array.from(document.querySelectorAll('.product-box'))
-      return items.slice(0, 20).map(card => {
-        const titleEl = card.querySelector('.product-name') as HTMLAnchorElement
-        const linkEl = card.querySelector('.product-image-link') as HTMLAnchorElement
-        const imgEl = card.querySelector('.product-image-wrapper img') as HTMLImageElement
+
+      return items.slice(0, 20).map((card) => {
+        const titleEl = card.querySelector('.product-name') as HTMLAnchorElement | null
+        const linkEl = card.querySelector('.product-image-link') as HTMLAnchorElement | null
+        const imgEl = card.querySelector('.product-image-wrapper img') as HTMLImageElement | null
         const refEl = card.querySelector('.product-artikelnr')
         const stockEl = card.querySelector('.badge-success')
 
         const reference = refEl?.textContent?.match(/\d+/)?.[0] || ''
         const stock = stockEl?.textContent?.trim() || ''
-        const link = linkEl?.href || titleEl?.href || (reference ? `https://www.elevatorshop.de/fr/search?search=${reference}` : '')
+        const link =
+          linkEl?.href ||
+          titleEl?.href ||
+          (reference
+            ? `https://www.elevatorshop.de/fr/search?search=${reference}`
+            : '')
 
         return {
           supplier: 'ElevatorShop',
@@ -62,10 +68,10 @@ export async function searchElevatorshop(query: string): Promise<SupplierResult[
           link,
           image: imgEl?.src || '',
           reference,
-          stock
+          stock,
         }
       })
-    })
+    }) as SupplierResult[]
 
     console.log('Elevatorshop parsed:', results.length)
     return results
