@@ -30,11 +30,11 @@ export async function searchElevatorshop(query: string): Promise<SupplierResult[
 
   try {
     await page.setRequestInterception(true)
-    page.on('request', (req) => {
+    ;(page as any).on('request', (req: any) => {
       const type = req.resourceType()
       if (['stylesheet', 'font', 'media'].includes(type)) req.abort()
       else req.continue()
-    })
+     })
 
     await page.goto(
       `https://www.elevatorshop.de/fr/search?search=${encodeURIComponent(query)}`,
