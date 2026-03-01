@@ -30,6 +30,8 @@ export async function searchElevatorshop(query: string): Promise<SupplierResult[
 
   try {
     await page.setRequestInterception(true)
+
+    // Fix union type issue
     ;(page as any).on('request', (req: any) => {
       const type = req.resourceType()
       if (['stylesheet', 'font', 'media'].includes(type)) req.abort()
@@ -43,18 +45,23 @@ export async function searchElevatorshop(query: string): Promise<SupplierResult[
 
     await page.waitForSelector('.product-box', { timeout: 10000 })
 
-    const results: SupplierResult[] = await page.evaluate((): SupplierResult[] => {
+    // 🔥 FIX définitif evaluate
+    const results = await (page as any).evaluate(() => {
       const items = Array.from(document.querySelectorAll('.product-box'))
 
-      return items.slice(0, 20).map((card) => {
-        const titleEl = card.querySelector('.product-name') as HTMLAnchorElement | null
-        const linkEl = card.querySelector('.product-image-link') as HTMLAnchorElement | null
-        const imgEl = card.querySelector('.product-image-wrapper img') as HTMLImageElement | null
+      return items.slice(0, 20).map((card: any) => {
+        const titleEl = card.querySelector('.product-name')
+        const linkEl = card.querySelector('.product-image-link')
+        const imgEl = card.querySelector('.product-image-wrapper img')
         const refEl = card.querySelector('.product-artikelnr')
         const stockEl = card.querySelector('.badge-success')
 
-        const reference = refEl?.textContent?.match(/\d+/)?.[0] || ''
-        const stock = stockEl?.textContent?.trim() || ''
+        const reference =
+          refEl?.textContent?.match(/\d+/)?.[0] || ''
+
+        const stock =
+          stockEl?.textContent?.trim() || ''
+
         const link =
           linkEl?.href ||
           titleEl?.href ||
@@ -71,10 +78,11 @@ export async function searchElevatorshop(query: string): Promise<SupplierResult[
           stock,
         }
       })
-    }) as SupplierResult[]
+    })
 
     console.log('Elevatorshop parsed:', results.length)
-    return results
+
+    return results as SupplierResult[]
   } catch (err) {
     console.error('Elevatorshop Puppeteer error:', err)
     return []
