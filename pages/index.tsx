@@ -24,17 +24,14 @@ export default function Home() {
   const [darkMode, setDarkMode] = useState(false)
   const [activeSupplier, setActiveSupplier] = useState("")
 
-  // Nouveaux states pour pagination par fournisseur
   const [pageSuppliers, setPageSuppliers] = useState<Record<string, number>>({})
   const [hasMoreSuppliers, setHasMoreSuppliers] = useState<Record<string, boolean>>({})
   const [loadingSuppliers, setLoadingSuppliers] = useState<Record<string, boolean>>({})
 
-  // Zoom modal state
   const [zoomImage, setZoomImage] = useState<string | null>(null)
 
   const suppliers = ["MySodimas", "ElevatorShop"]
 
-  // Requête initiale
   const handleSearch = async () => {
     if (!query) return
     setLoading(true)
@@ -62,7 +59,6 @@ export default function Home() {
     setLoading(false)
   }
 
-  // Charger page suivante pour un fournisseur
   const loadMore = async (supplier: string) => {
     if (!query || !hasMoreSuppliers[supplier]) return
     setLoadingSuppliers(prev => ({ ...prev, [supplier]: true }))
@@ -143,7 +139,6 @@ export default function Home() {
             from-white/60 via-white/40 to-transparent 
             dark:from-gray-900/80 dark:via-gray-900/60 dark:to-transparent" />
 
-          {/* CONTENU */}
           <div className="relative max-w-6xl mx-auto px-6 py-16 flex flex-col items-center">
 
             {/* TOP ROW */}
@@ -182,7 +177,6 @@ export default function Home() {
           </div>
         </header>
 
-        {/* ================= CONTENT ================= */}
         <main className="max-w-6xl mx-auto px-6 py-12">
 
           {loading && (
@@ -197,7 +191,6 @@ export default function Home() {
             </p>
           )}
 
-          {/* FILTRE FOURNISSEUR */}
           {Object.keys(groupedResults).length > 0 && (
             <div className="flex flex-wrap gap-4 mb-8 justify-center">
               <button
@@ -230,7 +223,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* RESULTATS */}
           {Object.entries(groupedResults)
             .filter(([supplier]) => !activeSupplier || activeSupplier === supplier)
             .map(([supplier, items]) => (
@@ -248,7 +240,7 @@ export default function Home() {
                             src={item.image}
                             alt={item.designation || item.title}
                             className="max-h-32 object-contain transition-transform duration-300 group-hover:scale-110 cursor-zoom-in"
-                            onClick={() => setZoomImage(item.image)}
+                            onClick={() => setZoomImage(item.image ?? null)}
                           />
                         ) : (
                           <div className="text-xs text-gray-400">
@@ -295,7 +287,6 @@ export default function Home() {
                   ))}
                 </div>
 
-                {/* BOUTON VOIR PLUS */}
                 {hasMoreSuppliers[supplier] && (
                   <div className="flex justify-center mt-6">
                     <button
@@ -310,18 +301,19 @@ export default function Home() {
               </div>
             ))}
 
-          {/* MODAL ZOOM */}
           {zoomImage && (
             <div
               className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
               onClick={() => setZoomImage(null)}
             >
-              <img
-                src={zoomImage}
-                alt="Zoom produit"
-                className="max-h-[90%] max-w-[90%] rounded-xl shadow-2xl"
-                onClick={e => e.stopPropagation()}
-              />
+              {zoomImage && (
+                <img
+                  src={zoomImage}
+                  alt="Zoom produit"
+                  className="max-h-[90%] max-w-[90%] rounded-xl shadow-2xl"
+                  onClick={e => e.stopPropagation()}
+                />
+              )}
               <button
                 onClick={() => setZoomImage(null)}
                 className="absolute top-5 right-5 text-white text-2xl font-bold"
