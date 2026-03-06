@@ -18,25 +18,29 @@ export default async function handler(
   console.log('API search start for query (Sodimas + Elevatorshop):', query)
 
   try {
-    // 🔹 Lancement en parallèle, Sodimas reste intact
+    // 🔹 Lancement en parallèle
     const [sodimasResults, elevatorshopResults] = await Promise.all([
       searchMySodimas(query).catch(err => {
         console.error('MySodimas error:', err)
-        return []
+        return { results: [], hasMore: false }
       }),
       searchElevatorshop(query).catch(err => {
         console.error('Elevatorshop error:', err)
-        return []
+        return { results: [], hasMore: false }
       })
     ])
 
-    console.log('MySodimas count:', sodimasResults.length)
-    console.log('Elevatorshop count:', elevatorshopResults.length)
+    // 🔹 Accéder au tableau réel de résultats
+    const sodimasList = sodimasResults.results || []
+    const elevatorshopList = elevatorshopResults.results || []
+
+    console.log('MySodimas count:', sodimasList.length)
+    console.log('Elevatorshop count:', elevatorshopList.length)
 
     // 🔹 Fusion simple des résultats
     const combined: SupplierResult[] = [
-      ...sodimasResults,
-      ...elevatorshopResults
+      ...sodimasList,
+      ...elevatorshopList
     ]
 
     console.log('TOTAL COMBINED:', combined.length)
