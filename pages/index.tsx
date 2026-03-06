@@ -8,10 +8,8 @@ function getLogoForSupplier(supplier: string): string | undefined {
   switch (supplier) {
     case "MySodimas":
       return "/logos/mysodimas.png"
-    case "MGTI":
-      return "/logos/mgti.png"
     case "ElevatorShop":
-      return "/logos/elevatorshop.png"  // ✅ nouveau logo ajouté
+      return "/logos/elevatorshop.png"
     default:
       return undefined
   }
@@ -23,37 +21,73 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [sortBy, setSortBy] = useState("pertinence")
   const [darkMode, setDarkMode] = useState(false)
-  const [activeSupplier, setActiveSupplier] = useState("") // ✅ fournisseur actif
+  const [activeSupplier, setActiveSupplier] = useState("")
 
+  // ✅ Nouveaux states pour pagination par fournisseur
+  const [pageSuppliers, setPageSuppliers] = useState<Record<string, number>>({})
+  const [hasMoreSuppliers, setHasMoreSuppliers] = useState<Record<string, boolean>>({})
+  const [loadingSuppliers, setLoadingSuppliers] = useState<Record<string, boolean>>({})
+
+  const suppliers = ["MySodimas", "ElevatorShop"]
+
+  // 🔹 Requête initiale
   const handleSearch = async () => {
     if (!query) return
     setLoading(true)
+    setResults([])
+    setPageSuppliers({})
+    setHasMoreSuppliers({})
+    setLoadingSuppliers({})
+
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
-      const data: SupplierResult[] = await res.json()
-      setResults(Array.isArray(data) ? data : [])
+      for (const supplier of suppliers) {
+        setLoadingSuppliers(prev => ({ ...prev, [supplier]: true }))
+
+        const res = await fetch(`/api/search-${supplier.toLowerCase()}?query=${encodeURIComponent(query)}&page=1`)
+        const data: { results: SupplierResult[]; hasMore: boolean } = await res.json()
+
+        setResults(prev => [...prev, ...(Array.isArray(data.results) ? data.results : [])])
+        setPageSuppliers(prev => ({ ...prev, [supplier]: 1 }))
+        setHasMoreSuppliers(prev => ({ ...prev, [supplier]: data.hasMore }))
+        setLoadingSuppliers(prev => ({ ...prev, [supplier]: false }))
+      }
     } catch (err) {
       console.error(err)
-      setResults([])
     }
+
     setLoading(false)
+  }
+
+  // 🔹 Charger page suivante pour un fournisseur
+  const loadMore = async (supplier: string) => {
+    if (!query || !hasMoreSuppliers[supplier]) return
+    setLoadingSuppliers(prev => ({ ...prev, [supplier]: true }))
+
+    try {
+      const nextPage = (pageSuppliers[supplier] || 1) + 1
+      const res = await fetch(`/api/search-${supplier.toLowerCase()}?query=${encodeURIComponent(query)}&page=${nextPage}`)
+      const data: { results: SupplierResult[]; hasMore: boolean } = await res.json()
+
+      setResults(prev => [...prev, ...(Array.isArray(data.results) ? data.results : [])])
+      setPageSuppliers(prev => ({ ...prev, [supplier]: nextPage }))
+      setHasMoreSuppliers(prev => ({ ...prev, [supplier]: data.hasMore }))
+    } catch (err) {
+      console.error(err)
+    }
+
+    setLoadingSuppliers(prev => ({ ...prev, [supplier]: false }))
   }
 
   const sortedResults = useMemo(() => {
     let sorted = [...results]
-
     if (sortBy === "az") {
       sorted.sort((a, b) =>
-        (a.designation || a.title || "").localeCompare(
-          b.designation || b.title || ""
-        )
+        (a.designation || a.title || "").localeCompare(b.designation || b.title || "")
       )
     }
-
     if (sortBy === "stock") {
       sorted.sort((a, b) => (b.stock ? 1 : 0) - (a.stock ? 1 : 0))
     }
-
     return sorted
   }, [results, sortBy])
 
@@ -83,10 +117,8 @@ export default function Home() {
                             backdrop-blur-xl 
                             border border-white/40 dark:border-gray-700 
                             rounded-full shadow-md transition">
-
               <span className="absolute left-2 text-xs">☀️</span>
               <span className="absolute right-2 text-xs">🌙</span>
-
               <div
                 className={`absolute top-1 left-1 w-6 h-6 
                             bg-white dark:bg-gray-900 
@@ -119,7 +151,7 @@ export default function Home() {
               />
             </div>
 
-            {/* ======= RECHERCHE AVEC Search.tsx ======= */}
+            {/* RECHERCHE */}
             <Search
               query={query}
               setQuery={setQuery}
@@ -141,7 +173,6 @@ export default function Home() {
                 </select>
               </div>
             )}
-
           </div>
         </header>
 
@@ -160,53 +191,51 @@ export default function Home() {
             </p>
           )}
 
-         {/* ==== BOUTONS FILTRE FOURNISSEUR ==== */}
-{Object.keys(groupedResults).length > 0 && (
-  <div className="flex flex-wrap gap-4 mb-8 justify-center">
-    <button
-      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 shadow-sm border ${
-        !activeSupplier
-          ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-700 hover:from-blue-700 hover:to-indigo-700 shadow-md"
-          : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
-      }`}
-      onClick={() => setActiveSupplier("")}
-    >
-      Tous ({results.length})
-    </button>
+          {/* FILTRE FOURNISSEUR */}
+          {Object.keys(groupedResults).length > 0 && (
+            <div className="flex flex-wrap gap-4 mb-8 justify-center">
+              <button
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 shadow-sm border ${
+                  !activeSupplier
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-700 hover:from-blue-700 hover:to-indigo-700 shadow-md"
+                    : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                }`}
+                onClick={() => setActiveSupplier("")}
+              >
+                Tous ({results.length})
+              </button>
 
-    {Object.entries(groupedResults).map(([supplier, items]) => (
-      <button
-        key={supplier}
-        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 shadow-sm border ${
-          activeSupplier === supplier
-            ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-700 hover:from-blue-700 hover:to-indigo-700 shadow-md"
-            : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
-        }`}
-        onClick={() => setActiveSupplier(supplier)}
-      >
-        {getLogoForSupplier(supplier) && (
-          <img src={getLogoForSupplier(supplier)} alt={supplier} className="h-6" />
-        )}
-        <span>{supplier} ({items.length})</span>
-      </button>
-    ))}
-  </div>
-)}
+              {Object.entries(groupedResults).map(([supplier, items]) => (
+                <button
+                  key={supplier}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 shadow-sm border ${
+                    activeSupplier === supplier
+                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-700 hover:from-blue-700 hover:to-indigo-700 shadow-md"
+                      : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  }`}
+                  onClick={() => setActiveSupplier(supplier)}
+                >
+                  {getLogoForSupplier(supplier) && (
+                    <img src={getLogoForSupplier(supplier)} alt={supplier} className="h-6" />
+                  )}
+                  <span>{supplier} ({items.length})</span>
+                </button>
+              ))}
+            </div>
+          )}
 
-          {/* ==== RESULTATS ==== */}
+          {/* RESULTATS */}
           {Object.entries(groupedResults)
             .filter(([supplier]) => !activeSupplier || activeSupplier === supplier)
             .map(([supplier, items]) => (
               <div key={supplier} className="mb-16">
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-
                   {items.map((item, index) => (
                     <div
                       key={index}
                       className="group bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col p-6 border border-gray-100 dark:border-gray-700"
                     >
-
                       <div className="h-44 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-xl mb-5">
                         {item.image ? (
                           <img
@@ -222,7 +251,6 @@ export default function Home() {
                       </div>
 
                       <div className="flex flex-col flex-1">
-
                         <h3 className="text-sm font-semibold text-gray-800 dark:text-white mb-3 line-clamp-2">
                           {item.designation || item.title}
                         </h3>
@@ -255,13 +283,23 @@ export default function Home() {
                             Voir le produit
                           </a>
                         )}
-
                       </div>
-
                     </div>
                   ))}
-
                 </div>
+
+                {/* BOUTON VOIR PLUS */}
+                {hasMoreSuppliers[supplier] && (
+                  <div className="flex justify-center mt-6">
+                    <button
+                      onClick={() => loadMore(supplier)}
+                      className="px-6 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold hover:from-blue-700 hover:to-indigo-700 transition"
+                    >
+                      {loadingSuppliers[supplier] ? "Chargement..." : "Voir plus"}
+                    </button>
+                  </div>
+                )}
+
               </div>
             ))}
         </main>

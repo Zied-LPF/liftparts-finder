@@ -3,5 +3,6 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
-  "/api/search": "pages/api/search.js"
+  "/api/search-mysodimas": "pages/api/search-mysodimas.js",
+  "/api/search-elevatorshop": "pages/api/search-elevatorshop.js"
 }
