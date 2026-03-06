@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react"
 import type { SupplierResult } from "../lib/types"
 import Search from "../components/Search"
+import Link from 'next/link'
 
 function getLogoForSupplier(supplier: string): string | undefined {
   switch (supplier) {
@@ -23,14 +24,17 @@ export default function Home() {
   const [darkMode, setDarkMode] = useState(false)
   const [activeSupplier, setActiveSupplier] = useState("")
 
-  // ✅ Nouveaux states pour pagination par fournisseur
+  // Nouveaux states pour pagination par fournisseur
   const [pageSuppliers, setPageSuppliers] = useState<Record<string, number>>({})
   const [hasMoreSuppliers, setHasMoreSuppliers] = useState<Record<string, boolean>>({})
   const [loadingSuppliers, setLoadingSuppliers] = useState<Record<string, boolean>>({})
 
+  // Zoom modal state
+  const [zoomImage, setZoomImage] = useState<string | null>(null)
+
   const suppliers = ["MySodimas", "ElevatorShop"]
 
-  // 🔹 Requête initiale
+  // Requête initiale
   const handleSearch = async () => {
     if (!query) return
     setLoading(true)
@@ -58,7 +62,7 @@ export default function Home() {
     setLoading(false)
   }
 
-  // 🔹 Charger page suivante pour un fournisseur
+  // Charger page suivante pour un fournisseur
   const loadMore = async (supplier: string) => {
     if (!query || !hasMoreSuppliers[supplier]) return
     setLoadingSuppliers(prev => ({ ...prev, [supplier]: true }))
@@ -144,11 +148,13 @@ export default function Home() {
 
             {/* TOP ROW */}
             <div className="w-full h-12 flex items-center justify-between mb-12">
-              <img
-                src="/logos/LiftParts-Finder.png"
-                alt="LiftParts Finder"
-                className="h-52 w-auto"
-              />
+              <Link href="/">
+                <img
+                  src="/logos/LiftParts-Finder.png"
+                  alt="LiftParts Finder"
+                  className="h-52 w-auto cursor-pointer"
+                />
+              </Link>
             </div>
 
             {/* RECHERCHE */}
@@ -241,7 +247,8 @@ export default function Home() {
                           <img
                             src={item.image}
                             alt={item.designation || item.title}
-                            className="max-h-32 object-contain transition-transform duration-300 group-hover:scale-110"
+                            className="max-h-32 object-contain transition-transform duration-300 group-hover:scale-110 cursor-zoom-in"
+                            onClick={() => setZoomImage(item.image)}
                           />
                         ) : (
                           <div className="text-xs text-gray-400">
@@ -302,6 +309,28 @@ export default function Home() {
 
               </div>
             ))}
+
+          {/* MODAL ZOOM */}
+          {zoomImage && (
+            <div
+              className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+              onClick={() => setZoomImage(null)}
+            >
+              <img
+                src={zoomImage}
+                alt="Zoom produit"
+                className="max-h-[90%] max-w-[90%] rounded-xl shadow-2xl"
+                onClick={e => e.stopPropagation()}
+              />
+              <button
+                onClick={() => setZoomImage(null)}
+                className="absolute top-5 right-5 text-white text-2xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+          )}
+
         </main>
       </div>
     </div>
