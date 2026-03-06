@@ -143,7 +143,17 @@ export default function Home() {
 
             {/* TOP ROW */}
             <div className="w-full h-12 flex items-center justify-between mb-12">
-              <Link href="/">
+              <Link
+                href="/"
+                onClick={() => {
+                  setQuery("")
+                  setResults([])
+                  setActiveSupplier("")
+                  setPageSuppliers({})
+                  setHasMoreSuppliers({})
+                  setLoadingSuppliers({})
+                }}
+              >
                 <img
                   src="/logos/LiftParts-Finder.png"
                   alt="LiftParts Finder"
@@ -177,6 +187,7 @@ export default function Home() {
           </div>
         </header>
 
+        {/* ================= CONTENT ================= */}
         <main className="max-w-6xl mx-auto px-6 py-12">
 
           {loading && (
@@ -191,6 +202,7 @@ export default function Home() {
             </p>
           )}
 
+          {/* FILTRE FOURNISSEUR */}
           {Object.keys(groupedResults).length > 0 && (
             <div className="flex flex-wrap gap-4 mb-8 justify-center">
               <button
@@ -223,6 +235,7 @@ export default function Home() {
             </div>
           )}
 
+          {/* RESULTATS */}
           {Object.entries(groupedResults)
             .filter(([supplier]) => !activeSupplier || activeSupplier === supplier)
             .map(([supplier, items]) => (
@@ -301,19 +314,18 @@ export default function Home() {
               </div>
             ))}
 
+          {/* MODAL ZOOM */}
           {zoomImage && (
             <div
               className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
               onClick={() => setZoomImage(null)}
             >
-              {zoomImage && (
-                <img
-                  src={zoomImage}
-                  alt="Zoom produit"
-                  className="max-h-[90%] max-w-[90%] rounded-xl shadow-2xl"
-                  onClick={e => e.stopPropagation()}
-                />
-              )}
+              <img
+                src={zoomImage}
+                alt="Zoom produit"
+                className="max-h-[90%] max-w-[90%] rounded-xl shadow-2xl"
+                onClick={e => e.stopPropagation()}
+              />
               <button
                 onClick={() => setZoomImage(null)}
                 className="absolute top-5 right-5 text-white text-2xl font-bold"
