@@ -7,9 +7,10 @@ interface SearchProps {
   setQuery: (q: string) => void
   handleSearch: () => void
   loading: boolean
+  disabled?: boolean // 🔹 ajouté
 }
 
-export default function Search({ query, setQuery, handleSearch, loading }: SearchProps) {
+export default function Search({ query, setQuery, handleSearch, loading, disabled }: SearchProps) {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") handleSearch()
   }
@@ -22,13 +23,16 @@ export default function Search({ query, setQuery, handleSearch, loading }: Searc
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Rechercher une référence..."
+          placeholder={disabled ? "Connectez-vous pour rechercher..." : "Rechercher une référence..."} // 🔹 placeholder adapté
+          disabled={disabled} // 🔹 désactivation si pas connecté
           className="flex-1 px-6 py-4 bg-transparent focus:outline-none text-gray-800 dark:text-white placeholder-gray-500"
         />
 
         <button
           onClick={handleSearch}
-          className="px-8 font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition"
+          disabled={disabled} // 🔹 désactivation si pas connecté
+          className={`px-8 font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition
+            ${disabled ? "opacity-50 cursor-not-allowed" : ""}`} // 🔹 style visuel quand désactivé
         >
           {loading ? "Recherche..." : "Rechercher"}
         </button>
