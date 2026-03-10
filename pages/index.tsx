@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
+import { useRouter } from 'next/router'
 import type { SupplierResult } from "../lib/types"
 import Search from "../components/Search"
 import Link from 'next/link'
@@ -17,6 +18,9 @@ function getLogoForSupplier(supplier: string): string | undefined {
 }
 
 export default function Home() {
+  const router = useRouter()
+  const [loggedIn, setLoggedIn] = useState(false)
+
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<SupplierResult[]>([])
   const [loading, setLoading] = useState(false)
@@ -31,6 +35,32 @@ export default function Home() {
   const [zoomImage, setZoomImage] = useState<string | null>(null)
 
   const suppliers = ["MySodimas", "ElevatorShop"]
+
+  // 🔹 Check cookie au chargement + après navigation
+  useEffect(() => {
+    const checkAuth = () => setLoggedIn(document.cookie.includes('lpf_auth=1'))
+    checkAuth()
+    router.events.on('routeChangeComplete', checkAuth)
+    return () => router.events.off('routeChangeComplete', checkAuth)
+  }, [router.events])
+
+    // 🔹 Détection login immédiat via event custom
+  useEffect(() => {
+    const handleLoginEvent = () => setLoggedIn(true)
+    window.addEventListener('lpf_login', handleLoginEvent)
+    return () => window.removeEventListener('lpf_login', handleLoginEvent)
+  }, [])
+
+  // 🔹 Login / Logout handlers
+  const handleLogout = () => {
+    document.cookie = 'lpf_auth=; Path=/; Max-Age=0;'
+    setLoggedIn(false)
+    router.push('/login')
+  }
+
+  const handleLogin = () => {
+    router.push('/login')
+  }
 
   const handleSearch = async () => {
     if (!query) return
@@ -110,7 +140,7 @@ export default function Home() {
           {/* DARK MODE TOGGLE */}
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className="absolute top-6 right-6 z-50"
+            className="absolute top-6 right-28 z-50"
           >
             <div className="relative w-14 h-8 flex items-center 
                             bg-white/70 dark:bg-gray-800/70 
@@ -127,6 +157,14 @@ export default function Home() {
                             ${darkMode ? "translate-x-6" : "translate-x-0"}`}
               />
             </div>
+          </button>
+
+          {/* LOGIN / LOGOUT BUTTON */}
+          <button
+            onClick={loggedIn ? handleLogout : handleLogin}
+            className="absolute top-6 right-6 z-50 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+          >
+            {loggedIn ? "Logout" : "Login"}
           </button>
 
           {/* IMAGE DE FOND */}
@@ -168,7 +206,14 @@ export default function Home() {
               setQuery={setQuery}
               handleSearch={handleSearch}
               loading={loading}
+              disabled={!loggedIn} // 🔹 Bloqué si non connecté
             />
+
+            {!loggedIn && (
+              <p className="text-red-500 text-sm mt-2 text-center">
+                Veuillez vous connecter pour utiliser la recherche.
+              </p>
+            )}
 
             {/* TRI */}
             {results.length > 0 && (
