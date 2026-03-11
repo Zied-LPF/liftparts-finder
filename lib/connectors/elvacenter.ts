@@ -1,5 +1,5 @@
 import type { SupplierResult } from "../types"
-import puppeteer from "puppeteer"
+import puppeteer, { Browser, Page } from "puppeteer"
 
 export async function searchElvacenter(
   query: string,
@@ -8,14 +8,14 @@ export async function searchElvacenter(
 ): Promise<{ results: SupplierResult[], hasMore: boolean }> {
   const results: SupplierResult[] = []
 
-  let browser: puppeteer.Browser | null = null
+  let browser: Browser | null = null
   try {
     browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"]
     })
 
-    const page = await browser.newPage()
+    const page: Page = await browser.newPage()
 
     // 🔹 Bloquer les images, styles et fonts pour aller plus vite
     await page.setRequestInterception(true)
