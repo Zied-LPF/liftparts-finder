@@ -17,7 +17,7 @@ export async function searchElvacenter(
 
     const page: Page = await browser.newPage()
 
-    // 🔹 Bloquer les images, styles et fonts pour aller plus vite
+    // 🔹 Bloquer images, CSS, fonts pour accélérer
     await page.setRequestInterception(true)
     page.on("request", (req) => {
       const type = req.resourceType()
@@ -38,13 +38,13 @@ export async function searchElvacenter(
     let hasMore = true
 
     while (hasMore) {
-      // 🔹 Scroll plus large pour réduire les étapes
+      // Scroll plus large
       await page.evaluate((selector) => {
         const container = document.querySelector(selector)
         if (container) container.scrollBy(0, 1500)
       }, containerSelector)
 
-      // 🔹 Attente dynamique que de nouveaux produits apparaissent ou timeout 2s
+      // Attente dynamique que de nouveaux produits apparaissent
       await page.waitForFunction(
         (count) => document.querySelectorAll("div.df-card[data-role='result']").length > count,
         { timeout: 2000 },
@@ -59,13 +59,13 @@ export async function searchElvacenter(
           const imgEl = card.querySelector<HTMLImageElement>("img")
           const stockEl = card.querySelector<HTMLDivElement>("div.df-card__availability")
 
-          const designation = titleEl?.innerText.trim() || undefined
+          const title = titleEl?.innerText.trim() || undefined
           const reference = skuEl?.innerText.trim() || undefined
           const image = imgEl?.getAttribute("src") ? `https:${imgEl.getAttribute("src")}` : undefined
           const stock = stockEl?.innerText.trim() || undefined
           const link = reference ? `https://shop.elvacenter.com/fr/#/dfclassic/query=${reference}` : undefined
 
-          return { supplier: "Elvacenter", designation, reference, image, stock, link }
+          return { supplier: "Elvacenter", title, reference, image, stock, link }
         })
       })
 
