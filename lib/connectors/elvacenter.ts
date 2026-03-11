@@ -59,11 +59,11 @@ export async function searchElvacenter(
           const imgEl = card.querySelector<HTMLImageElement>("img")
           const stockEl = card.querySelector<HTMLDivElement>("div.df-card__availability")
 
-          const title = titleEl?.innerText.trim() || "" // ✅ toujours string
-          const reference = skuEl?.innerText.trim() || undefined
-          const image = imgEl?.getAttribute("src") ? `https:${imgEl.getAttribute("src")}` : undefined
-          const stock = stockEl?.innerText.trim() || undefined
-          const link = reference ? `https://shop.elvacenter.com/fr/#/dfclassic/query=${reference}` : undefined
+          const title = titleEl?.innerText.trim() || ""     // ✅ toujours string
+          const reference = skuEl?.innerText.trim() || ""   // ✅ toujours string
+          const image = imgEl?.getAttribute("src") ? `https:${imgEl.getAttribute("src")}` : "" // ✅ toujours string
+          const stock = stockEl?.innerText.trim() || ""     // ✅ toujours string
+          const link = reference ? `https://shop.elvacenter.com/fr/#/dfclassic/query=${reference}` : "" // ✅ toujours string
 
           return { supplier: "Elvacenter", title, reference, image, stock, link }
         })
