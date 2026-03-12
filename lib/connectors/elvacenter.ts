@@ -48,7 +48,7 @@ export async function searchElvacenter(
     await page.waitForSelector(containerSelector, { timeout: timeoutSelector })
 
     // 🔹 Pause supplémentaire pour que JS termine le rendu
-    if (process.env.VERCEL) await page.waitForTimeout(3000)
+    if (process.env.VERCEL) await new Promise(resolve => setTimeout(resolve, 3000))
 
     let previousCount = startIndex
     let hasMore = true
@@ -61,7 +61,7 @@ export async function searchElvacenter(
 
       await page.waitForFunction(
         (count) => document.querySelectorAll("div.df-card[data-role='result']").length > count,
-        { timeout: 3000 }, // 🔹 temps d’attente un peu plus long en prod
+        { timeout: 3000 },
         previousCount
       ).catch(() => {})
 
