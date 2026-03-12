@@ -9,15 +9,18 @@ export interface Supplier {
   search: (query: string) => Promise<SupplierResult[]>
 }
 
-// 🔹 Wrapper simple pour Elvacenter
-async function searchElvacenterSimple(query: string): Promise<SupplierResult[]> {
-  const { results } = await searchElvacenter(query)
+// 🔹 Wrapper générique pour adapter les connecteurs
+async function unwrapResults(
+  searchFn: (query: string) => Promise<{ results: SupplierResult[], hasMore: boolean }>,
+  query: string
+): Promise<SupplierResult[]> {
+  const { results } = await searchFn(query)
   return results
 }
 
 // 🔹 Liste des fournisseurs
 export const suppliers: Supplier[] = [
-  { name: 'MySodimas', search: searchMySodimas },
-  { name: 'ElevatorShop', search: searchElevatorshop },
-  { name: 'Elvacenter', search: searchElvacenterSimple }
+  { name: 'MySodimas', search: (query) => unwrapResults(searchMySodimas, query) },
+  { name: 'ElevatorShop', search: (query) => unwrapResults(searchElevatorshop, query) },
+  { name: 'Elvacenter', search: (query) => unwrapResults(searchElvacenter, query) }
 ]
