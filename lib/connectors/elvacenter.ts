@@ -9,10 +9,20 @@ export async function searchElvacenter(
   const results: SupplierResult[] = []
 
   let browser: Browser | null = null
+  let executablePath: string | undefined
+  let args: string[] = ["--no-sandbox", "--disable-setuid-sandbox"] // déclaration avant usage
+
+  if (process.env.VERCEL) {
+    const chromium = require("@sparticuz/chromium")
+    executablePath = await chromium.executablePath()
+    args.push(...chromium.args)
+  }
+
   try {
     browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      args,
+      executablePath,
     })
 
     const page: Page = await browser.newPage()
@@ -59,11 +69,11 @@ export async function searchElvacenter(
           const imgEl = card.querySelector<HTMLImageElement>("img")
           const stockEl = card.querySelector<HTMLDivElement>("div.df-card__availability")
 
-          const title = titleEl?.innerText.trim() || ""     // ✅ toujours string
-          const reference = skuEl?.innerText.trim() || ""   // ✅ toujours string
-          const image = imgEl?.getAttribute("src") ? `https:${imgEl.getAttribute("src")}` : "" // ✅ toujours string
-          const stock = stockEl?.innerText.trim() || ""     // ✅ toujours string
-          const link = reference ? `https://shop.elvacenter.com/fr/#/dfclassic/query=${reference}` : "" // ✅ toujours string
+          const title = titleEl?.innerText.trim() || ""
+          const reference = skuEl?.innerText.trim() || ""
+          const image = imgEl?.getAttribute("src") ? `https:${imgEl.getAttribute("src")}` : ""
+          const stock = stockEl?.innerText.trim() || ""
+          const link = reference ? `https://shop.elvacenter.com/fr/#/dfclassic/query=${reference}` : ""
 
           return { supplier: "Elvacenter", title, reference, image, stock, link }
         })
