@@ -9,9 +9,15 @@ export interface Supplier {
   search: (query: string) => Promise<SupplierResult[]>
 }
 
+// 🔹 Wrapper simple pour Elvacenter
+async function searchElvacenterSimple(query: string): Promise<SupplierResult[]> {
+  const { results } = await searchElvacenter(query)
+  return results
+}
+
 // 🔹 Liste des fournisseurs
 export const suppliers: Supplier[] = [
   { name: 'MySodimas', search: searchMySodimas },
   { name: 'ElevatorShop', search: searchElevatorshop },
-  { name: 'Elvacenter', search: searchElvacenter } // peut retourner [] pour l'instant
+  { name: 'Elvacenter', search: searchElvacenterSimple }
 ]
