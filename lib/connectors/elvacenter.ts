@@ -10,7 +10,7 @@ export async function searchElvacenter(
 
   let browser: Browser | null = null
   let executablePath: string | undefined
-  let args: string[] = ["--no-sandbox", "--disable-setuid-sandbox"] // déclaration avant usage
+  let args: string[] = ["--no-sandbox", "--disable-setuid-sandbox"]
 
   if (process.env.VERCEL) {
     const chromium = require("@sparticuz/chromium")
@@ -42,26 +42,29 @@ export async function searchElvacenter(
     await page.goto(searchUrl, { waitUntil: "networkidle2" })
 
     const containerSelector = "#df-results__dfclassic"
-    await page.waitForSelector(containerSelector, { timeout: 5000 })
+
+    // 🔹 Attente plus longue en prod pour que JS charge correctement
+    const timeoutSelector = process.env.VERCEL ? 15000 : 5000
+    await page.waitForSelector(containerSelector, { timeout: timeoutSelector })
+
+    // 🔹 Pause supplémentaire pour que JS termine le rendu
+    if (process.env.VERCEL) await page.waitForTimeout(3000)
 
     let previousCount = startIndex
     let hasMore = true
 
     while (hasMore) {
-      // Scroll plus large
       await page.evaluate((selector) => {
         const container = document.querySelector(selector)
         if (container) container.scrollBy(0, 1500)
       }, containerSelector)
 
-      // Attente dynamique que de nouveaux produits apparaissent
       await page.waitForFunction(
         (count) => document.querySelectorAll("div.df-card[data-role='result']").length > count,
-        { timeout: 2000 },
+        { timeout: 3000 }, // 🔹 temps d’attente un peu plus long en prod
         previousCount
       ).catch(() => {})
 
-      // Récupération des produits visibles
       const items = await page.$$eval("div.df-card[data-role='result']", (cards) => {
         return cards.map(card => {
           const titleEl = card.querySelector<HTMLDivElement>("div.df-card__title")
