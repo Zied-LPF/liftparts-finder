@@ -13,10 +13,9 @@ export async function searchElvacenter(
   const args: string[] = ["--no-sandbox", "--disable-setuid-sandbox"]
 
   try {
-    // 🔹 Lancer Puppeteer complet en prod et local
     browser = await puppeteer.launch({
       headless: true,
-      args,
+      args
     })
 
     const page: Page = await browser.newPage()
@@ -36,30 +35,15 @@ export async function searchElvacenter(
     await page.goto(searchUrl, { waitUntil: "networkidle2" })
 
     const containerSelector = "#df-results__dfclassic"
+    // 🔹 timeout plus long pour prod
+    await page.waitForSelector(containerSelector, { timeout: 15000 }).catch(() => {})
 
-    // 🔹 Timeout plus long pour être sûr que le JS ait rendu toutes les cartes
-    await page.waitForSelector(containerSelector, { timeout: 20000 })
-
-    let previousCount = startIndex
-    let hasMore = true
-
-    while (hasMore) {
-      // 🔹 Scroll du container
-      await page.evaluate((selector) => {
-        const container = document.querySelector(selector)
-        if (container) container.scrollBy(0, 1500)
-      }, containerSelector)
-
-      // 🔹 Attente dynamique des nouveaux résultats
-      await page.waitForFunction(
-        (count) => document.querySelectorAll("div.df-card[data-role='result']").length > count,
-        { timeout: 3000 },
-        previousCount
-      ).catch(() => {})
-
-      // 🔹 Récupération des produits
-      const items = await page.$$eval("div.df-card[data-role='result']", (cards) => {
-        return cards.map(card => {
+    // 🔹 récupérer seulement les premières cartes visibles
+    const maxCards = 15 // 🔹 limiter pour tenir <10s
+    const items = await page.$$eval(
+      `div.df-card[data-role='result']`,
+      (cards, max) => {
+        return cards.slice(0, max).map(card => {
           const titleEl = card.querySelector<HTMLDivElement>("div.df-card__title")
           const skuEl = card.querySelector<HTMLDivElement>("div.df-card__sku")
           const imgEl = card.querySelector<HTMLImageElement>("img")
@@ -73,14 +57,13 @@ export async function searchElvacenter(
 
           return { supplier: "Elvacenter", title, reference, image, stock, link }
         })
-      })
+      },
+      maxCards
+    )
 
-      const newItems = items.slice(previousCount, previousCount + limit)
-      results.push(...newItems)
-      previousCount += newItems.length
-
-      hasMore = newItems.length > 0 && items.length > previousCount
-    }
+    // 🔹 slice avec startIndex/limit pour compatibilité pagination
+    const newItems = items.slice(startIndex, startIndex + limit)
+    results.push(...newItems)
 
   } catch (err) {
     console.error("Elvacenter search error:", err)
@@ -88,5 +71,6 @@ export async function searchElvacenter(
     if (browser) await browser.close()
   }
 
-  return { results, hasMore: results.length > 0 }
+  // 🔹 hasMore = vrai si on a rempli le maxCards
+  return { results, hasMore: results.length === 15 }
 }
