@@ -1,3 +1,4 @@
+// lib/connectors/elvacenter.ts
 import type { SupplierResult } from "../types"
 import puppeteer, { Browser, Page } from "puppeteer"
 
@@ -9,20 +10,13 @@ export async function searchElvacenter(
   const results: SupplierResult[] = []
 
   let browser: Browser | null = null
-  let executablePath: string | undefined
-  let args: string[] = ["--no-sandbox", "--disable-setuid-sandbox"]
-
-  if (process.env.VERCEL) {
-    const chromium = require("@sparticuz/chromium")
-    executablePath = await chromium.executablePath()
-    args.push(...chromium.args)
-  }
+  const args: string[] = ["--no-sandbox", "--disable-setuid-sandbox"]
 
   try {
+    // 🔹 Lancer Puppeteer complet en prod et local
     browser = await puppeteer.launch({
       headless: true,
       args,
-      executablePath,
     })
 
     const page: Page = await browser.newPage()
@@ -43,28 +37,27 @@ export async function searchElvacenter(
 
     const containerSelector = "#df-results__dfclassic"
 
-    // 🔹 Attente plus longue en prod pour que JS charge correctement
-    const timeoutSelector = process.env.VERCEL ? 15000 : 5000
-    await page.waitForSelector(containerSelector, { timeout: timeoutSelector })
-
-    // 🔹 Pause supplémentaire pour que JS termine le rendu
-    if (process.env.VERCEL) await new Promise(resolve => setTimeout(resolve, 3000))
+    // 🔹 Timeout plus long pour être sûr que le JS ait rendu toutes les cartes
+    await page.waitForSelector(containerSelector, { timeout: 20000 })
 
     let previousCount = startIndex
     let hasMore = true
 
     while (hasMore) {
+      // 🔹 Scroll du container
       await page.evaluate((selector) => {
         const container = document.querySelector(selector)
         if (container) container.scrollBy(0, 1500)
       }, containerSelector)
 
+      // 🔹 Attente dynamique des nouveaux résultats
       await page.waitForFunction(
         (count) => document.querySelectorAll("div.df-card[data-role='result']").length > count,
         { timeout: 3000 },
         previousCount
       ).catch(() => {})
 
+      // 🔹 Récupération des produits
       const items = await page.$$eval("div.df-card[data-role='result']", (cards) => {
         return cards.map(card => {
           const titleEl = card.querySelector<HTMLDivElement>("div.df-card__title")
