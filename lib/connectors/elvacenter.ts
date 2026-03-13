@@ -5,7 +5,7 @@ const HASHID = "1824a3f07157f932fdf54d53265f4bc5"
 export async function searchElvacenter(
   query: string,
   page: number = 1
-): Promise<SupplierResult[]> {
+): Promise<{ results: SupplierResult[]; hasMore: boolean }> {
 
   try {
 
@@ -19,43 +19,38 @@ export async function searchElvacenter(
 
     const res = await fetch(url, {
       headers: {
-        "accept": "*/*",
-        "origin": "https://shop.elvacenter.com",
-        "referer": "https://shop.elvacenter.com/",
+        accept: "*/*",
+        origin: "https://shop.elvacenter.com",
+        referer: "https://shop.elvacenter.com/",
         "user-agent": "Mozilla/5.0"
       }
     })
 
     if (!res.ok) {
       console.error("Elvacenter API error:", res.status)
-      return []
+      return { results: [], hasMore: false }
     }
 
     const data = await res.json()
 
-    const results: SupplierResult[] = data.results.map((item: any) => ({
-
+    const results: SupplierResult[] = (data.results || []).map((item: any) => ({
       supplier: "Elvacenter",
-
       title: item.title2 || item.title || "",
-
       reference: item.oem || item.gtin || "",
-
       image: item.image_link || "",
-
       stock: item.availability || "",
-
       link: item.link || ""
-
     }))
 
-    return results
+    const hasMore = results.length === 30
+
+    return { results, hasMore }
 
   } catch (err) {
 
     console.error("Elvacenter search error:", err)
 
-    return []
+    return { results: [], hasMore: false }
 
   }
 }
