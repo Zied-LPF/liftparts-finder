@@ -1,76 +1,61 @@
-// lib/connectors/elvacenter.ts
 import type { SupplierResult } from "../types"
-import puppeteer, { Browser, Page } from "puppeteer"
+
+const HASHID = "1824a3f07157f932fdf54d53265f4bc5"
 
 export async function searchElvacenter(
   query: string,
-  startIndex: number = 0,
-  limit: number = 30
-): Promise<{ results: SupplierResult[], hasMore: boolean }> {
-  const results: SupplierResult[] = []
-
-  let browser: Browser | null = null
-  const args: string[] = ["--no-sandbox", "--disable-setuid-sandbox"]
+  page: number = 1
+): Promise<SupplierResult[]> {
 
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args
-    })
 
-    const page: Page = await browser.newPage()
+    const url =
+      `https://eu1-search.doofinder.com/5/search` +
+      `?hashid=${HASHID}` +
+      `&query=${encodeURIComponent(query)}` +
+      `&page=${page}` +
+      `&rpp=30` +
+      `&query_name=match_and`
 
-    // 🔹 Bloquer images, CSS, fonts pour accélérer
-    await page.setRequestInterception(true)
-    page.on("request", (req) => {
-      const type = req.resourceType()
-      if (type === "image" || type === "stylesheet" || type === "font") {
-        req.abort()
-      } else {
-        req.continue()
+    const res = await fetch(url, {
+      headers: {
+        "accept": "*/*",
+        "origin": "https://shop.elvacenter.com",
+        "referer": "https://shop.elvacenter.com/",
+        "user-agent": "Mozilla/5.0"
       }
     })
 
-    const searchUrl = `https://shop.elvacenter.com/fr/#/dfclassic/query=${encodeURIComponent(query)}`
-    await page.goto(searchUrl, { waitUntil: "networkidle2" })
+    if (!res.ok) {
+      console.error("Elvacenter API error:", res.status)
+      return []
+    }
 
-    const containerSelector = "#df-results__dfclassic"
-    // 🔹 timeout plus long pour prod
-    await page.waitForSelector(containerSelector, { timeout: 15000 }).catch(() => {})
+    const data = await res.json()
 
-    // 🔹 récupérer seulement les premières cartes visibles
-    const maxCards = 15 // 🔹 limiter pour tenir <10s
-    const items = await page.$$eval(
-      `div.df-card[data-role='result']`,
-      (cards, max) => {
-        return cards.slice(0, max).map(card => {
-          const titleEl = card.querySelector<HTMLDivElement>("div.df-card__title")
-          const skuEl = card.querySelector<HTMLDivElement>("div.df-card__sku")
-          const imgEl = card.querySelector<HTMLImageElement>("img")
-          const stockEl = card.querySelector<HTMLDivElement>("div.df-card__availability")
+    const results: SupplierResult[] = data.results.map((item: any) => ({
 
-          const title = titleEl?.innerText.trim() || ""
-          const reference = skuEl?.innerText.trim() || ""
-          const image = imgEl?.getAttribute("src") ? `https:${imgEl.getAttribute("src")}` : ""
-          const stock = stockEl?.innerText.trim() || ""
-          const link = reference ? `https://shop.elvacenter.com/fr/#/dfclassic/query=${reference}` : ""
+      supplier: "Elvacenter",
 
-          return { supplier: "Elvacenter", title, reference, image, stock, link }
-        })
-      },
-      maxCards
-    )
+      title: item.title2 || item.title || "",
 
-    // 🔹 slice avec startIndex/limit pour compatibilité pagination
-    const newItems = items.slice(startIndex, startIndex + limit)
-    results.push(...newItems)
+      reference: item.oem || item.gtin || "",
+
+      image: item.image_link || "",
+
+      stock: item.availability || "",
+
+      link: item.link || ""
+
+    }))
+
+    return results
 
   } catch (err) {
-    console.error("Elvacenter search error:", err)
-  } finally {
-    if (browser) await browser.close()
-  }
 
-  // 🔹 hasMore = vrai si on a rempli le maxCards
-  return { results, hasMore: results.length === 15 }
+    console.error("Elvacenter search error:", err)
+
+    return []
+
+  }
 }
