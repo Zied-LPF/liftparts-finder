@@ -36,7 +36,7 @@ export default function Home() {
 
   const [zoomImage, setZoomImage] = useState<string | null>(null)
 
-  const suppliers = ["MySodimas", "ElevatorShop", "Elvacenter"]
+  const suppliers = ["MySodimas", "Elvacenter", "ElevatorShop" ]
 
   // 🔹 Check cookie au chargement + après navigation
   useEffect(() => {

@@ -1,7 +1,7 @@
 // lib/suppliers.ts
 import { searchMySodimas } from './connectors/mysodimas'
-import { searchElevatorshop } from './connectors/elevatorshop'
 import { searchElvacenter } from './connectors/elvacenter'
+import { searchElevatorshop } from './connectors/elevatorshop'
 import type { SupplierResult } from './types'
 
 export interface Supplier {
@@ -21,6 +21,7 @@ async function unwrapResults(
 // 🔹 Liste des fournisseurs
 export const suppliers: Supplier[] = [
   { name: 'MySodimas', search: (query) => unwrapResults(searchMySodimas, query) },
-  { name: 'ElevatorShop', search: (query) => unwrapResults(searchElevatorshop, query) },
-  { name: 'Elvacenter', search: (query) => unwrapResults(searchElvacenter, query) }
+  { name: 'Elvacenter', search: (query) => unwrapResults(searchElvacenter, query) },
+  { name: 'ElevatorShop', search: (query) => unwrapResults(searchElevatorshop, query) }
+  
 ]
