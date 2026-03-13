@@ -36,7 +36,7 @@ export async function searchElvacenter(
     const results: SupplierResult[] = (data.results || []).map((item: any) => ({
       supplier: "Elvacenter",
       title: item.title2 || item.title || "",
-      reference: item.oem || item.gtin || "",
+      reference: item.gtin || item.oem || "",
       image: item.image_link || "",
       stock: item.availability || "",
       link: item.link || ""
