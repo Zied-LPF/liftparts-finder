@@ -1,16 +1,16 @@
 // lib/connectors/mgti.ts
 import type { SupplierResult } from "../types";
-import puppeteer, { Browser } from "puppeteer"; // pour local
-import type { LaunchOptions } from "puppeteer-core";
 
-let isProd = process.env.VERCEL === "1"; // true sur Vercel
+let isProd = process.env.VERCEL === "1";
 
+let puppeteer: any = null;
 let chromium: any = null;
-let puppeteerCore: any = null;
 
 if (isProd) {
+  puppeteer = require("puppeteer-core");
   chromium = require("chrome-aws-lambda");
-  puppeteerCore = require("puppeteer-core");
+} else {
+  puppeteer = require("puppeteer");
 }
 
 export async function searchMGTI(
@@ -18,42 +18,37 @@ export async function searchMGTI(
   page: number = 1
 ): Promise<{ results: SupplierResult[]; hasMore: boolean }> {
   const results: SupplierResult[] = [];
-  let browser: Browser | null = null;
+  let browser: any = null;
 
   try {
-    const launchOptions: LaunchOptions =
-      isProd
-        ? {
-            args: chromium.args,
-            defaultViewport: chromium.defaultViewport,
-            executablePath: await chromium.executablePath,
-            headless: chromium.headless,
-          }
-        : {
-            headless: true,
-            args: ["--no-sandbox", "--disable-setuid-sandbox"],
-          };
-
-    browser = isProd
-      ? await puppeteerCore.launch(launchOptions)
-      : await puppeteer.launch(launchOptions);
+    if (isProd) {
+      browser = await puppeteer.launch({
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath,
+        headless: chromium.headless,
+      });
+    } else {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      });
+    }
 
     const pageBrowser = await browser.newPage();
     await pageBrowser.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
 
-    // Bloquer images/fonts pour accélérer
     await pageBrowser.setRequestInterception(true);
-    pageBrowser.on("request", req => {
+    pageBrowser.on("request", (req: any) => {
       if (["image", "font"].includes(req.resourceType())) req.abort();
       else req.continue();
     });
 
-    // URL recherche
     const searchUrl = `https://www.mgti.fr/PBSearch.asp?ActionID=1&CCode=2&ShowSMImg=1&SearchText=${encodeURIComponent(query)}`;
     await pageBrowser.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 0 });
 
     if (page > 1) {
-      await pageBrowser.evaluate((p) => (window as any).SearchGoToPage(p), page);
+      await pageBrowser.evaluate((p: number) => (window as any).SearchGoToPage(p), page);
       await pageBrowser.waitForSelector("a.oxcell", { timeout: 10000 });
     }
 
@@ -76,7 +71,7 @@ export async function searchMGTI(
         }
       });
 
-      const hasMore = Array.from(document.querySelectorAll(".navbar a")).some(a => {
+      const hasMore = Array.from(document.querySelectorAll(".navbar a")).some((a) => {
         const href = (a as HTMLAnchorElement).getAttribute("href") || "";
         return href.includes("SearchGoToPage") && !a.querySelector("span")?.classList.contains("off");
       });
@@ -84,7 +79,8 @@ export async function searchMGTI(
       return { items, hasMore };
     });
 
-    data.items.forEach(item => results.push({ ...item, supplier: "MGTI" }));
+    data.items.forEach((item) => results.push({ ...item, supplier: "MGTI" }));
+
     console.log(`MGTI page: ${page} produits: ${results.length} hasMore: ${data.hasMore}`);
 
     return { results, hasMore: data.hasMore };
