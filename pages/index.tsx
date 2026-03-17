@@ -14,8 +14,10 @@ function getLogoForSupplier(supplier: string): string | undefined {
       return "/logos/elevatorshop.png"
     case "Elvacenter":
       return "/logos/elvacenter.png"
-    case "Sodica":        // 🔹 ajouté
+    case "Sodica":        // 🔹 existant
       return "/logos/sodica.png"
+    case "MGTI":          // 🔹 ajouté
+      return "/logos/mgti.png"
     default:
       return undefined
   }
@@ -38,7 +40,7 @@ export default function Home() {
 
   const [zoomImage, setZoomImage] = useState<string | null>(null)
 
-  const suppliers = ["MySodimas", "Elvacenter", "ElevatorShop", "Sodica" ]
+  const suppliers = ["MySodimas", "Elvacenter", "ElevatorShop", "Sodica", "MGTI"] // 🔹 MGTI ajouté
 
   // 🔹 Check cookie au chargement + après navigation
   useEffect(() => {
@@ -48,7 +50,7 @@ export default function Home() {
     return () => router.events.off('routeChangeComplete', checkAuth)
   }, [router.events])
 
-    // 🔹 Détection login immédiat via event custom
+  // 🔹 Détection login immédiat via event custom
   useEffect(() => {
     const handleLoginEvent = () => setLoggedIn(true)
     window.addEventListener('lpf_login', handleLoginEvent)
