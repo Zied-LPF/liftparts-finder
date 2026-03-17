@@ -1,6 +1,7 @@
 // lib/connectors/mgti.ts
 import type { SupplierResult } from "../types";
 import puppeteer, { Browser } from "puppeteer";
+import chromium from "chrome-aws-lambda";
 
 export async function searchMGTI(
   query: string,
@@ -11,9 +12,14 @@ export async function searchMGTI(
   let browser: Browser | null = null;
 
   try {
+    const isProd = process.env.VERCEL === "1";
+
+    // 🔹 Lancer Puppeteer : local = puppeteer-core, prod = chrome-aws-lambda
     browser = await puppeteer.launch({
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      headless: true // 🔹 compatible TypeScript et Vercel
+      args: isProd ? chromium.args : ["--no-sandbox", "--disable-setuid-sandbox"],
+      defaultViewport: isProd ? chromium.defaultViewport : null,
+      executablePath: isProd ? await chromium.executablePath : undefined,
+      headless: true
     });
 
     const pageBrowser = await browser.newPage();
