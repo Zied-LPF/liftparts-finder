@@ -3,7 +3,7 @@ import { searchMySodimas } from './connectors/mysodimas'
 import { searchElvacenter } from './connectors/elvacenter'
 import { searchElevatorshop } from './connectors/elevatorshop'
 import { searchSodica } from './connectors/sodica'   // 🔹 existant
-import { searchMgti } from './connectors/mgti'       // 🔹 nouveau
+import { searchMGTI } from './connectors/mgti'       // 🔹 nouveau
 import type { SupplierResult } from './types'
 
 export interface Supplier {
