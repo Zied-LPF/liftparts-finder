@@ -2,6 +2,7 @@
 import { searchMySodimas } from './connectors/mysodimas'
 import { searchElvacenter } from './connectors/elvacenter'
 import { searchElevatorshop } from './connectors/elevatorshop'
+import { searchSodica } from './connectors/sodica'   // 🔹 nouveau
 import type { SupplierResult } from './types'
 
 export interface Supplier {
@@ -22,6 +23,6 @@ async function unwrapResults(
 export const suppliers: Supplier[] = [
   { name: 'MySodimas', search: (query) => unwrapResults(searchMySodimas, query) },
   { name: 'Elvacenter', search: (query) => unwrapResults(searchElvacenter, query) },
-  { name: 'ElevatorShop', search: (query) => unwrapResults(searchElevatorshop, query) }
-  
+  { name: 'ElevatorShop', search: (query) => unwrapResults(searchElevatorshop, query) },
+  { name: 'Sodica', search: (query) => unwrapResults(searchSodica, query) }   // 🔹 ajouté
 ]

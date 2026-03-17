@@ -1,39 +1,118 @@
-// lib/connectors/sodica.ts
-import type { SupplierResult } from '../types'
-import fetch from 'node-fetch'
+import type { SupplierResult } from "../types"
+import puppeteer from "puppeteer-extra"
+import StealthPlugin from "puppeteer-extra-plugin-stealth"
 
-export async function fetchSodica(query: string): Promise<SupplierResult[]> {
-  const url = `https://www.sodica.fr/recherche?q=${encodeURIComponent(query)}`
-  const res = await fetch(url)
-  const html = await res.text()
+puppeteer.use(StealthPlugin())
 
-  const cheerio = await import('cheerio')
-  const $ = cheerio.load(html)
+export async function searchSodica(
+  query: string,
+  page: number = 1
+): Promise<{ results: SupplierResult[]; hasMore: boolean }> {
 
   const results: SupplierResult[] = []
+  let browser: any = null
 
-  $('.product-item').each((_, el) => {
-    const item = $(el)
+  try {
 
-    const title = item.find('.product-title').text().trim()
-    const ref = item.find('.product-ref').text().trim()
-    const priceText = item.find('.product-price').text().replace(/[^\d.,]/g, '').replace(',', '.')
-    const price = priceText ? Number(priceText) : undefined
-    const link = item.find('a.product-link').attr('href') || ''
-    const image = item.find('img.product-image').attr('src') || undefined
-    const stock = item.find('.product-stock').text().trim() || undefined
-
-    results.push({
-      supplier: 'Sodica',
-      reference: ref || undefined,
-      title,
-      price,
-      link: link.startsWith('http') ? link : `https://sodica.fr${link}`,
-      image,
-      stock,
-      designation: title
+    browser = await puppeteer.launch({
+      headless: true, // accélération safe
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
     })
-  })
 
-  return results
+    const pageBrowser = await browser.newPage()
+    await pageBrowser.setViewport({ width: 1366, height: 768 })
+
+    console.log("➡️ Ouverture Sodica")
+
+    await pageBrowser.goto("https://sodica.fr", {
+      waitUntil: "networkidle2"
+    })
+
+    // accepter cookies si présent
+    try {
+      await pageBrowser.click('#onetrust-accept-btn-handler', { timeout: 5000 })
+      console.log("Cookies OK")
+    } catch {}
+
+    // pause humaine x5 plus rapide
+    await new Promise(resolve => setTimeout(resolve, 400))
+
+    // focus champ recherche
+    await pageBrowser.click('input[name="SearchTerm"]')
+    await pageBrowser.type('input[name="SearchTerm"]', query, { delay: 50 })
+
+    await new Promise(resolve => setTimeout(resolve, 400))
+
+    await pageBrowser.keyboard.press("Enter")
+    console.log("🔍 Recherche lancée")
+
+    // attendre produits (page 1)
+    await pageBrowser.waitForSelector(".product-grid-item", { timeout: 15000 })
+    console.log("✅ Produits chargés")
+
+    // =========================
+    // 🔽 PAGINATION
+    // =========================
+    if (page > 1) {
+      for (let i = 1; i < page; i++) {
+        console.log(`➡️ Passage à la page ${i + 1}`)
+
+        const nextBtn = await pageBrowser.$('a:has(.ph-caret-right)')
+        if (!nextBtn) {
+          console.log("❌ Pas de page suivante")
+          break
+        }
+
+        await Promise.all([
+          nextBtn.click(),
+          pageBrowser.waitForNavigation({ waitUntil: "networkidle2", timeout: 15000 })
+        ])
+
+        await new Promise(resolve => setTimeout(resolve, 400))
+      }
+    }
+    // =========================
+
+    const data = await pageBrowser.evaluate(() => {
+      return Array.from(document.querySelectorAll(".product-grid-item")).map(el => {
+        const designation =
+          el.querySelector(".product-title")?.textContent?.trim() || ""
+        const reference =
+          el.querySelector(".product-number-label")?.nextElementSibling?.textContent?.trim() || ""
+        let image = (el.querySelector("img") as HTMLImageElement)?.getAttribute("src") || ""
+        if (image && !image.startsWith("http")) image = "https://sodica.fr" + image
+        let link = (el.querySelector(".product-title") as HTMLAnchorElement)?.getAttribute("href") || ""
+        if (link && !link.startsWith("http")) link = "https://sodica.fr" + link
+        return { designation, reference, image, link }
+      })
+    })
+
+    data.forEach(item => {
+      if (item.designation && item.reference) {
+        results.push({
+          supplier: "Sodica",
+          designation: item.designation,
+          reference: item.reference,
+          image: item.image,
+          stock: "",
+          link: item.link
+        })
+      }
+    })
+
+    // =========================
+    // 🔽 DETECTION hasMore
+    // =========================
+    const hasMore = await pageBrowser.$('a:has(.ph-caret-right)') !== null
+    // =========================
+
+    return { results, hasMore }
+
+  } catch (err) {
+    console.error("Erreur searchSodica:", err)
+    return { results: [], hasMore: false }
+  } finally {
+    if (browser) await browser.close()
+  }
+
 }
