@@ -2,9 +2,9 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/api/search-mysodimas": "pages/api/search-mysodimas.js",
   "/": "pages/index.js",
-  "/api/search-elvacenter": "pages/api/search-elvacenter.js",
+  "/api/search-mysodimas": "pages/api/search-mysodimas.js",
   "/api/search-elevatorshop": "pages/api/search-elevatorshop.js",
+  "/api/search-elvacenter": "pages/api/search-elvacenter.js",
   "/api/search-sodica": "pages/api/search-sodica.js"
 }
