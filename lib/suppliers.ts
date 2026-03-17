@@ -26,5 +26,5 @@ export const suppliers: Supplier[] = [
   { name: 'Elvacenter', search: (query) => unwrapResults(searchElvacenter, query) },
   { name: 'ElevatorShop', search: (query) => unwrapResults(searchElevatorshop, query) },
   { name: 'Sodica', search: (query) => unwrapResults(searchSodica, query) },
-  { name: 'MGTI', search: (query) => unwrapResults(searchMgti, query) }   // 🔹 ajouté
+  { name: 'MGTI', search: (query) => unwrapResults(searchMGTI, query) }   // 🔹 ajouté
 ]
