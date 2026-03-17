@@ -79,7 +79,10 @@ export async function searchMGTI(
       return { items, hasMore };
     });
 
-    data.items.forEach((item) => results.push({ ...item, supplier: "MGTI" }));
+    (data.items as SupplierResult[]).forEach((item: SupplierResult) =>
+	  results.push({ ...item, supplier: "MGTI" })
+    );
+
 
     console.log(`MGTI page: ${page} produits: ${results.length} hasMore: ${data.hasMore}`);
 
