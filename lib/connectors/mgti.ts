@@ -13,34 +13,34 @@ export async function searchMGTI(
   try {
     browser = await puppeteer.launch({
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      headless: "new"
+      headless: true // 🔹 compatible TypeScript et Vercel
     });
 
     const pageBrowser = await browser.newPage();
     await pageBrowser.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
 
-    // 🔹 Bloquer images/fonts pour accélérer
+    // Bloquer images/fonts pour accélérer
     await pageBrowser.setRequestInterception(true);
     pageBrowser.on("request", req => {
       if (["image", "font"].includes(req.resourceType())) req.abort();
       else req.continue();
     });
 
-    // 🔽 Aller sur la page de recherche (page 1)
+    // Aller sur la page de recherche (page 1)
     const searchUrl = `https://www.mgti.fr/PBSearch.asp?ActionID=1&CCode=2&ShowSMImg=1&SearchText=${encodeURIComponent(query)}`;
     await pageBrowser.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 0 });
 
-    // 🔽 Pagination via JS
+    // Pagination via JS
     if (page > 1) {
       await pageBrowser.evaluate((p) => {
         (window as any).SearchGoToPage(p);
       }, page);
 
-      // Attendre qu'au moins un produit soit visible
+      // On attend qu'au moins un produit apparaisse
       await pageBrowser.waitForSelector("a.oxcell", { timeout: 10000 });
     }
 
-    // 🔽 Extraction des produits
+    // Extraction des produits
     const data = await pageBrowser.evaluate(() => {
       const items: any[] = [];
       document.querySelectorAll("a.oxcell").forEach((el) => {
