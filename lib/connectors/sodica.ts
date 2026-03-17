@@ -73,32 +73,33 @@ export async function searchSodica(
     }
     // =========================
 
-    const data = await pageBrowser.evaluate(() => {
-      return Array.from(document.querySelectorAll(".product-grid-item")).map(el => {
-        const designation =
-          el.querySelector(".product-title")?.textContent?.trim() || ""
-        const reference =
-          el.querySelector(".product-number-label")?.nextElementSibling?.textContent?.trim() || ""
-        let image = (el.querySelector("img") as HTMLImageElement)?.getAttribute("src") || ""
-        if (image && !image.startsWith("http")) image = "https://sodica.fr" + image
-        let link = (el.querySelector(".product-title") as HTMLAnchorElement)?.getAttribute("href") || ""
-        if (link && !link.startsWith("http")) link = "https://sodica.fr" + link
-        return { designation, reference, image, link }
-      })
+   const data: { designation: string; reference: string; image: string; link: string }[] =
+  await pageBrowser.evaluate(() => {
+    return Array.from(document.querySelectorAll(".product-grid-item")).map(el => {
+      const designation =
+        el.querySelector(".product-title")?.textContent?.trim() || ""
+      const reference =
+        el.querySelector(".product-number-label")?.nextElementSibling?.textContent?.trim() || ""
+      let image = (el.querySelector("img") as HTMLImageElement)?.getAttribute("src") || ""
+      if (image && !image.startsWith("http")) image = "https://sodica.fr" + image
+      let link = (el.querySelector(".product-title") as HTMLAnchorElement)?.getAttribute("href") || ""
+      if (link && !link.startsWith("http")) link = "https://sodica.fr" + link
+      return { designation, reference, image, link }
     })
+  })
 
-    data.forEach(item => {
-      if (item.designation && item.reference) {
-        results.push({
-          supplier: "Sodica",
-          designation: item.designation,
-          reference: item.reference,
-          image: item.image,
-          stock: "",
-          link: item.link
-        })
-      }
+data.forEach((item: { designation: string; reference: string; image: string; link: string }) => {
+  if (item.designation && item.reference) {
+    results.push({
+      supplier: "Sodica",
+      designation: item.designation,
+      reference: item.reference,
+      image: item.image,
+      stock: "",
+      link: item.link
     })
+  }
+})
 
     // =========================
     // 🔽 DETECTION hasMore
