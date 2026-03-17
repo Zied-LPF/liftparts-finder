@@ -1,118 +1,91 @@
-import type { SupplierResult } from "../types"
-import { chromium } from "playwright"
+import type { SupplierResult } from "../types";
+import fetch from "node-fetch";
+import * as cheerio from "cheerio";
 
 export async function searchSodica(
   query: string,
   page: number = 1
 ): Promise<{ results: SupplierResult[]; hasMore: boolean }> {
 
-  const results: SupplierResult[] = []
-  let browser: any = null
+  const results: SupplierResult[] = [];
 
   try {
+    // =========================
+    // 🔽 Construire l'URL /filter/
+    // =========================
+    const pageNumber = page - 1; // Sodica commence à 0
+    const url = `https://sodica.fr/fr/filter/0?PageNumber=${pageNumber}&PageSize=12&SearchTerm=${encodeURIComponent(query)}`;
 
-    browser = await chromium.launch({
-      headless: true // ✅ compatible Vercel direct
-    })
-
-    const pageBrowser = await browser.newPage()
-    await pageBrowser.setViewportSize({ width: 1366, height: 768 })
-
-    console.log("➡️ Ouverture Sodica")
-
-    await pageBrowser.goto("https://sodica.fr", {
-      waitUntil: "domcontentloaded"
-    })
-
-    // accepter cookies si présent
-    try {
-      await pageBrowser.click('#onetrust-accept-btn-handler', { timeout: 5000 })
-      console.log("Cookies OK")
-    } catch {}
-
-    // petite pause
-    await pageBrowser.waitForTimeout(1000)
-
-    // focus champ recherche
-    await pageBrowser.click('input[name="SearchTerm"]')
-    await pageBrowser.fill('input[name="SearchTerm"]', query)
-
-    await pageBrowser.waitForTimeout(500)
-    await pageBrowser.keyboard.press("Enter")
-
-    console.log("🔍 Recherche lancée")
-
-    // attendre produits
-    await pageBrowser.waitForSelector(".product-grid-item", { timeout: 20000 })
-    console.log("✅ Produits chargés")
-
-    const html = await pageBrowser.content()
-    const hasProductsInHTML = html.includes("product-grid-item")
-
-    console.log("HTML contient produits:", hasProductsInHTML)
+    console.log("SODICA URL:", url);
 
     // =========================
-    // 🔽 PAGINATION
+    // 🔽 Premier fetch pour récupérer cookies
     // =========================
-    for (let i = 1; i < page; i++) {
-      console.log(`➡️ Passage à la page ${i + 1}`)
-
-      const nextBtn = await pageBrowser.$('a:has(.ph-caret-right)')
-      if (!nextBtn) {
-        console.log("❌ Pas de page suivante")
-        break
+    const initResp = await fetch("https://sodica.fr/fr/search", {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "fr-FR,fr;q=0.9",
+        "Referer": "https://sodica.fr/",
+        "Connection": "keep-alive"
       }
+    });
 
-      await Promise.all([
-        nextBtn.click(),
-        pageBrowser.waitForLoadState("domcontentloaded")
-      ])
+    const cookies = initResp.headers.get("set-cookie") || "";
 
-      await pageBrowser.waitForTimeout(800)
-    }
     // =========================
+    // 🔽 Fetch réel /filter/ avec cookies
+    // =========================
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "fr-FR,fr;q=0.9",
+        "Referer": "https://sodica.fr/",
+        "Origin": "https://sodica.fr",
+        "Connection": "keep-alive",
+        "Cookie": cookies
+      }
+    });
 
-    const data = await pageBrowser.evaluate(() => {
-      return Array.from(document.querySelectorAll(".product-grid-item")).map(el => {
-        const designation =
-          el.querySelector(".product-title")?.textContent?.trim() || ""
+    const html = await response.text();
+    const $ = cheerio.load(html);
 
-        const reference =
-          el.querySelector(".product-number-label")?.nextElementSibling?.textContent?.trim() || ""
+    // =========================
+    // 🔽 Sélection des produits
+    // =========================
+    $(".product-grid-item").each((_, el) => {
+      const designation = $(el).find(".product-title").text().trim();
+      const reference = $(el).find(".product-number-label").next().text().trim();
+      let image = $(el).find("img").attr("src") || "";
+      if (image && !image.startsWith("http")) image = "https://sodica.fr" + image;
+      let link = $(el).find(".product-title").attr("href") || "";
+      if (link && !link.startsWith("http")) link = "https://sodica.fr" + link;
 
-        let image = (el.querySelector("img") as HTMLImageElement)?.getAttribute("src") || ""
-        if (image && !image.startsWith("http")) image = "https://sodica.fr" + image
-
-        let link = (el.querySelector(".product-title") as HTMLAnchorElement)?.getAttribute("href") || ""
-        if (link && !link.startsWith("http")) link = "https://sodica.fr" + link
-
-        return { designation, reference, image, link }
-      })
-    })
-
-    data.forEach((item: { designation: string; reference: string; image: string; link: string }) => {
-      if (item.designation && item.reference) {
+      if (designation && reference) {
         results.push({
           supplier: "Sodica",
-          designation: item.designation,
-          reference: item.reference,
-          image: item.image,
+          designation,
+          reference,
+          image,
           stock: "",
-          link: item.link,
-          title: item.designation
-        })
+          link,
+          title: designation
+        });
       }
-    })
+    });
 
-    const hasMore = (await pageBrowser.$('a:has(.ph-caret-right)')) !== null
+    // =========================
+    // 🔽 Détection hasMore (présence du bouton suivant)
+    // =========================
+    const hasMore = $(".ph-caret-right").length > 0;
 
-    return { results, hasMore }
+    console.log("Produits trouvés:", results.length);
+
+    return { results, hasMore };
 
   } catch (err) {
-    console.error("Erreur searchSodica:", err)
-    return { results: [], hasMore: false }
-  } finally {
-    if (browser) await browser.close()
+    console.error("Erreur searchSodica:", err);
+    return { results: [], hasMore: false };
   }
-
 }
