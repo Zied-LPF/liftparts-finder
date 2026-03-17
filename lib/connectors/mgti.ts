@@ -1,7 +1,8 @@
-// lib/connectors/mgti.ts
 import type { SupplierResult } from "../types";
 import puppeteer, { Browser } from "puppeteer";
 import chromium from "chrome-aws-lambda";
+
+const isProd = process.env.VERCEL_ENV === "production";
 
 export async function searchMGTI(
   query: string,
@@ -12,12 +13,9 @@ export async function searchMGTI(
   let browser: Browser | null = null;
 
   try {
-    const isProd = process.env.VERCEL === "1";
-
-    // 🔹 Lancer Puppeteer : local = puppeteer-core, prod = chrome-aws-lambda
     browser = await puppeteer.launch({
-      args: isProd ? chromium.args : ["--no-sandbox", "--disable-setuid-sandbox"],
-      defaultViewport: isProd ? chromium.defaultViewport : null,
+      args: isProd ? chromium.args : [],
+      defaultViewport: isProd ? chromium.defaultViewport : undefined,
       executablePath: isProd ? await chromium.executablePath : undefined,
       headless: true
     });
@@ -25,28 +23,22 @@ export async function searchMGTI(
     const pageBrowser = await browser.newPage();
     await pageBrowser.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
 
-    // Bloquer images/fonts pour accélérer
     await pageBrowser.setRequestInterception(true);
     pageBrowser.on("request", req => {
       if (["image", "font"].includes(req.resourceType())) req.abort();
       else req.continue();
     });
 
-    // Aller sur la page de recherche (page 1)
     const searchUrl = `https://www.mgti.fr/PBSearch.asp?ActionID=1&CCode=2&ShowSMImg=1&SearchText=${encodeURIComponent(query)}`;
     await pageBrowser.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 0 });
 
-    // Pagination via JS
     if (page > 1) {
       await pageBrowser.evaluate((p) => {
         (window as any).SearchGoToPage(p);
       }, page);
-
-      // On attend qu'au moins un produit apparaisse
       await pageBrowser.waitForSelector("a.oxcell", { timeout: 10000 });
     }
 
-    // Extraction des produits
     const data = await pageBrowser.evaluate(() => {
       const items: any[] = [];
       document.querySelectorAll("a.oxcell").forEach((el) => {
@@ -75,7 +67,6 @@ export async function searchMGTI(
     });
 
     data.items.forEach(item => results.push({ ...item, supplier: "MGTI" }));
-
     console.log(`MGTI page: ${page} produits: ${results.length} hasMore: ${data.hasMore}`);
 
     return { results, hasMore: data.hasMore };
