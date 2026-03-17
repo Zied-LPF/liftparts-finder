@@ -46,6 +46,11 @@ export async function searchSodica(
     await pageBrowser.waitForSelector(".product-grid-item", { timeout: 20000 })
     console.log("✅ Produits chargés")
 
+    const hasProductsInHTML = await pageBrowser.content().then(c =>
+ 	 c.includes("product-grid-item")
+    )
+    console.log("HTML contient produits:", hasProductsInHTML)
+
     // =========================
     // 🔽 PAGINATION
     // =========================
