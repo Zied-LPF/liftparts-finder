@@ -91,13 +91,14 @@ export async function searchSodica(
 data.forEach((item: { designation: string; reference: string; image: string; link: string }) => {
   if (item.designation && item.reference) {
     results.push({
-      supplier: "Sodica",
-      designation: item.designation,
-      reference: item.reference,
-      image: item.image,
-      stock: "",
-      link: item.link
-    })
+  	supplier: "Sodica",
+  	title: item.designation,        // 🔹 ajouter ce champ
+  	designation: item.designation,
+ 	reference: item.reference,
+	image: item.image,
+ 	stock: "",
+ 	link: item.link
+     })
   }
 })
 
