@@ -1,8 +1,5 @@
 import type { SupplierResult } from "../types"
-import puppeteer from "puppeteer-extra"
-import StealthPlugin from "puppeteer-extra-plugin-stealth"
-
-puppeteer.use(StealthPlugin())
+import { chromium } from "playwright"
 
 export async function searchSodica(
   query: string,
@@ -14,18 +11,17 @@ export async function searchSodica(
 
   try {
 
-    browser = await puppeteer.launch({
-      headless: true, // mode headless pour Vercel / rapide
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    browser = await chromium.launch({
+      headless: true // ✅ compatible Vercel direct
     })
 
     const pageBrowser = await browser.newPage()
-    await pageBrowser.setViewport({ width: 1366, height: 768 })
+    await pageBrowser.setViewportSize({ width: 1366, height: 768 })
 
     console.log("➡️ Ouverture Sodica")
 
     await pageBrowser.goto("https://sodica.fr", {
-      waitUntil: "networkidle2"
+      waitUntil: "domcontentloaded"
     })
 
     // accepter cookies si présent
@@ -34,29 +30,29 @@ export async function searchSodica(
       console.log("Cookies OK")
     } catch {}
 
-    // pause humaine
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // petite pause
+    await pageBrowser.waitForTimeout(1000)
 
     // focus champ recherche
     await pageBrowser.click('input[name="SearchTerm"]')
-    await pageBrowser.type('input[name="SearchTerm"]', query, { delay: 80 })
+    await pageBrowser.fill('input[name="SearchTerm"]', query)
 
-    await new Promise(resolve => setTimeout(resolve, 500))
-
+    await pageBrowser.waitForTimeout(500)
     await pageBrowser.keyboard.press("Enter")
+
     console.log("🔍 Recherche lancée")
 
-    // attendre produits (page 1)
+    // attendre produits
     await pageBrowser.waitForSelector(".product-grid-item", { timeout: 20000 })
     console.log("✅ Produits chargés")
 
     // =========================
-    // 🔽 PAGINATION AJOUTÉE
+    // 🔽 PAGINATION
     // =========================
     for (let i = 1; i < page; i++) {
       console.log(`➡️ Passage à la page ${i + 1}`)
-      const nextBtn = await pageBrowser.$('a:has(.ph-caret-right)')
 
+      const nextBtn = await pageBrowser.$('a:has(.ph-caret-right)')
       if (!nextBtn) {
         console.log("❌ Pas de page suivante")
         break
@@ -64,33 +60,32 @@ export async function searchSodica(
 
       await Promise.all([
         nextBtn.click(),
-        pageBrowser.waitForNavigation({ waitUntil: "networkidle2", timeout: 20000 })
+        pageBrowser.waitForLoadState("domcontentloaded")
       ])
 
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await pageBrowser.waitForTimeout(800)
     }
     // =========================
 
-    const data: {
-      designation: string
-      reference: string
-      image: string
-      link: string
-    }[] = await pageBrowser.evaluate(() => {
+    const data = await pageBrowser.evaluate(() => {
       return Array.from(document.querySelectorAll(".product-grid-item")).map(el => {
         const designation =
           el.querySelector(".product-title")?.textContent?.trim() || ""
+
         const reference =
           el.querySelector(".product-number-label")?.nextElementSibling?.textContent?.trim() || ""
+
         let image = (el.querySelector("img") as HTMLImageElement)?.getAttribute("src") || ""
         if (image && !image.startsWith("http")) image = "https://sodica.fr" + image
+
         let link = (el.querySelector(".product-title") as HTMLAnchorElement)?.getAttribute("href") || ""
         if (link && !link.startsWith("http")) link = "https://sodica.fr" + link
+
         return { designation, reference, image, link }
       })
     })
 
-    data.forEach(item => {
+    data.forEach((item: { designation: string; reference: string; image: string; link: string }) => {
       if (item.designation && item.reference) {
         results.push({
           supplier: "Sodica",
@@ -99,16 +94,12 @@ export async function searchSodica(
           image: item.image,
           stock: "",
           link: item.link,
-          title: item.designation // ✅ requis par SupplierResult
+          title: item.designation
         })
       }
     })
 
-    // =========================
-    // 🔽 DETECTION hasMore
-    // =========================
     const hasMore = (await pageBrowser.$('a:has(.ph-caret-right)')) !== null
-    // =========================
 
     return { results, hasMore }
 
