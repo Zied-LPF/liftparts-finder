@@ -1,6 +1,6 @@
 // lib/connectors/mgti.ts
 import type { SupplierResult } from "../types";
-import puppeteer from "puppeteer";
+import puppeteer, { Browser } from "puppeteer";
 
 export async function searchMGTI(
   query: string,
@@ -8,7 +8,7 @@ export async function searchMGTI(
 ): Promise<{ results: SupplierResult[]; hasMore: boolean }> {
 
   const results: SupplierResult[] = [];
-  let browser: puppeteer.Browser | null = null;
+  let browser: Browser | null = null;
 
   try {
     browser = await puppeteer.launch({
@@ -19,7 +19,7 @@ export async function searchMGTI(
     const pageBrowser = await browser.newPage();
     await pageBrowser.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
 
-    // 🔹 Bloquer les images/fonts pour accélérer
+    // 🔹 Bloquer images/fonts pour accélérer
     await pageBrowser.setRequestInterception(true);
     pageBrowser.on("request", req => {
       if (["image", "font"].includes(req.resourceType())) req.abort();
@@ -36,7 +36,7 @@ export async function searchMGTI(
         (window as any).SearchGoToPage(p);
       }, page);
 
-      // On attend simplement qu'au moins un produit apparaisse
+      // Attendre qu'au moins un produit soit visible
       await pageBrowser.waitForSelector("a.oxcell", { timeout: 10000 });
     }
 
