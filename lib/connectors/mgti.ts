@@ -1,103 +1,119 @@
 // lib/connectors/mgti.ts
 import type { SupplierResult } from "../types";
 
-const isProd = process.env.VERCEL === "1";
+let puppeteer: typeof import("puppeteer") | typeof import("puppeteer-core");
+let executablePath: string | undefined;
+let args: string[] | undefined;
+let defaultViewport: any;
 
 export async function searchMGTI(
   query: string,
-  page: number = 1
+  pageNumber: number = 1
 ): Promise<{ results: SupplierResult[]; hasMore: boolean }> {
 
-  const results: SupplierResult[] = [];
-  let browser: any = null;
+  // 🔥 EXACTEMENT comme ElevatorShop
+  if (process.env.VERCEL) {
+    puppeteer = require("puppeteer-core");
+    const chromium = require("@sparticuz/chromium");
+    executablePath = await chromium.executablePath();
+    args = chromium.args;
+    defaultViewport = chromium.defaultViewport;
+  } else {
+    puppeteer = require("puppeteer");
+    executablePath = undefined;
+    args = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"];
+    defaultViewport = undefined;
+  }
+
+  const browser = await puppeteer.launch({
+    headless: true,
+    args,
+    defaultViewport,
+    executablePath,
+  });
 
   try {
-    let puppeteer: any;
-    let executablePath: string | undefined;
+    const page = await browser.newPage();
 
-    if (isProd) {
-      // ✅ Vercel
-      const chromium = require("@sparticuz/chromium");
-      puppeteer = require("puppeteer-core");
+    await page.setUserAgent("Mozilla/5.0");
 
-      executablePath = await chromium.executablePath();
-      
-      browser = await puppeteer.launch({
-        args: chromium.args,
-        executablePath,
-        headless: chromium.headless,
-      });
-
-    } else {
-      // ✅ Local
-      puppeteer = require("puppeteer");
-
-      browser = await puppeteer.launch({
-        headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      });
-    }
-
-    const pageBrowser = await browser.newPage();
-    await pageBrowser.setUserAgent("Mozilla/5.0");
-
-    await pageBrowser.setRequestInterception(true);
-    pageBrowser.on("request", (req: any) => {
-      if (["image", "font"].includes(req.resourceType())) req.abort();
+    // Bloquer ressources lourdes
+    await page.setRequestInterception(true);
+    (page as any).on("request", (req: any) => {
+      const type = req.resourceType();
+      if (["image", "font", "stylesheet"].includes(type)) req.abort();
       else req.continue();
     });
 
     const searchUrl = `https://www.mgti.fr/PBSearch.asp?ActionID=1&CCode=2&ShowSMImg=1&SearchText=${encodeURIComponent(query)}`;
-    await pageBrowser.goto(searchUrl, { waitUntil: "domcontentloaded" });
 
-    if (page > 1) {
-      await pageBrowser.evaluate((p: number) => {
+    await page.goto(searchUrl, { waitUntil: "domcontentloaded" }).catch(() => {});
+
+    // Pagination JS
+    if (pageNumber > 1) {
+      await page.evaluate((p) => {
         (window as any).SearchGoToPage(p);
-      }, page);
+      }, pageNumber);
 
-      await pageBrowser.waitForSelector("a.oxcell", { timeout: 10000 });
+      await page.waitForSelector("a.oxcell", { timeout: 10000 }).catch(() => {});
     }
 
-    const data = await pageBrowser.evaluate(() => {
-      const items: any[] = [];
+    const data: { items: SupplierResult[]; hasMore: boolean } =
+      await page.evaluate(() => {
+        const items: SupplierResult[] = [];
 
-      document.querySelectorAll("a.oxcell").forEach((el) => {
-        const designation = el.querySelector(".PBItemName")?.textContent?.trim() || "";
-        const reference =
-          el.getAttribute("data-id") || "";
+        document.querySelectorAll("a.oxcell").forEach((el: any) => {
+          const designation =
+            el.querySelector(".PBItemName")?.textContent?.trim() || "";
 
-        let image = (el.querySelector("img") as HTMLImageElement)?.src || "";
-        if (image && !image.startsWith("http")) image = "https://www.mgti.fr/" + image;
+          const reference =
+            el.querySelector(".c-cs-product-display__cell-inner")?.textContent?.trim() ||
+            el.getAttribute("data-id") ||
+            "";
 
-        let link = (el as HTMLAnchorElement).href || "";
-        if (link && !link.startsWith("http")) link = "https://www.mgti.fr/" + link;
+          let image = el.querySelector("img")?.src || "";
+          if (image && !image.startsWith("http")) {
+            image = "https://www.mgti.fr/" + image;
+          }
 
-        if (designation && reference) {
-          items.push({
-            designation,
-            reference,
-            image,
-            link,
-            title: designation,
-          });
-        }
+          let link = el.href || "";
+          if (link && !link.startsWith("http")) {
+            link = "https://www.mgti.fr/" + link;
+          }
+
+          const stock =
+            el.querySelector(".PBMsgInStock")?.textContent?.trim() || "";
+
+          if (designation && reference) {
+            items.push({
+              supplier: "MGTI",
+              title: designation,
+              designation,
+              reference,
+              image,
+              link,
+              stock,
+            } as SupplierResult);
+          }
+        });
+
+        const hasMore = Array.from(document.querySelectorAll(".navbar a")).some(
+          (a: any) => {
+            const href = a.getAttribute("href") || "";
+            return href.includes("SearchGoToPage") &&
+              !a.querySelector("span")?.classList.contains("off");
+          }
+        );
+
+        return { items, hasMore };
       });
 
-      const hasMore = document.querySelector(".navbar") !== null;
-
-      return { items, hasMore };
-    });
-
-    (data.items as SupplierResult[]).forEach((item) =>
-      results.push({ ...item, supplier: "MGTI" })
-    );
-
-    return { results, hasMore: data.hasMore };
+    return data;
 
   } catch (err) {
     console.error("Erreur searchMGTI:", err);
     return { results: [], hasMore: false };
   } finally {
-    if (browser) await browser.close();
+    await browser.close();
   }
 }
