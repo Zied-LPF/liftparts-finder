@@ -11,7 +11,7 @@ export async function searchMGTI(
   pageNumber: number = 1
 ): Promise<{ results: SupplierResult[]; hasMore: boolean }> {
 
-  // 🔥 EXACTEMENT comme ElevatorShop
+  // ✅ ENVIRONNEMENT (IDENTIQUE À ELEVATORSHOP)
   if (process.env.VERCEL) {
     puppeteer = require("puppeteer-core");
     const chromium = require("@sparticuz/chromium");
@@ -37,27 +37,35 @@ export async function searchMGTI(
 
     await page.setUserAgent("Mozilla/5.0");
 
-    // Bloquer ressources lourdes
+    // 🚀 Bloquer ressources inutiles
     await page.setRequestInterception(true);
     (page as any).on("request", (req: any) => {
       const type = req.resourceType();
-      if (["image", "font", "stylesheet"].includes(type)) req.abort();
+      if (["image", "font", "stylesheet", "media"].includes(type)) req.abort();
       else req.continue();
     });
 
     const searchUrl = `https://www.mgti.fr/PBSearch.asp?ActionID=1&CCode=2&ShowSMImg=1&SearchText=${encodeURIComponent(query)}`;
 
-    await page.goto(searchUrl, { waitUntil: "domcontentloaded" }).catch(() => {});
+    // ✅ IMPORTANT : attendre le rendu JS Oxatis
+    await page.goto(searchUrl, { waitUntil: "networkidle2" }).catch(() => {});
 
-    // Pagination JS
+    // attendre que les produits soient injectés
+    await page.waitForSelector(".PBItemName", { timeout: 15000 });
+
+    // petit délai de sécurité (Oxatis lent)
+    await new Promise(res => setTimeout(res, 2000));
+
+    // 🔁 Pagination JS (si >1)
     if (pageNumber > 1) {
       await page.evaluate((p) => {
         (window as any).SearchGoToPage(p);
       }, pageNumber);
 
-      await page.waitForSelector("a.oxcell", { timeout: 10000 }).catch(() => {});
+      await page.waitForSelector(".PBItemName", { timeout: 10000 });
     }
 
+    // 📦 Extraction
     const data: { items: SupplierResult[]; hasMore: boolean } =
       await page.evaluate(() => {
         const items: SupplierResult[] = [];
@@ -97,18 +105,26 @@ export async function searchMGTI(
           }
         });
 
+        // 🔁 Détection pagination
         const hasMore = Array.from(document.querySelectorAll(".navbar a")).some(
           (a: any) => {
             const href = a.getAttribute("href") || "";
-            return href.includes("SearchGoToPage") &&
-              !a.querySelector("span")?.classList.contains("off");
+            return (
+              href.includes("SearchGoToPage") &&
+              !a.querySelector("span")?.classList.contains("off")
+            );
           }
         );
 
         return { items, hasMore };
       });
 
-    return data;
+    console.log(`MGTI page ${pageNumber} → ${data.items.length} résultats`);
+
+    return {
+  	results: data.items,
+ 	hasMore: data.hasMore
+    };
 
   } catch (err) {
     console.error("Erreur searchMGTI:", err);
