@@ -30,7 +30,7 @@ export async function searchKone(
     }
 
     const browser = await puppeteer.launch({
-      headless: "new",
+      headless: true,
       args,
       defaultViewport,
       executablePath,
