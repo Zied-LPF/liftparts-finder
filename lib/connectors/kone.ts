@@ -13,10 +13,13 @@ export async function searchKone(
       const puppeteer = await import("puppeteer-core")
       const chromium = await import("@sparticuz/chromium")
 
+      // ✅ FIX TYPE
+      const chromiumAny = chromium as any
+
       browser = await puppeteer.launch({
-        args: chromium.args,
-        defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath(),
+        args: chromiumAny.args,
+        defaultViewport: chromiumAny.defaultViewport,
+        executablePath: await chromiumAny.executablePath(),
         headless: true,
       })
     } else {
