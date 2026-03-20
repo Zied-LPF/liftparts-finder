@@ -15,14 +15,17 @@ export async function searchKone(
 
       const chromiumAny = chromium as any
 
-      // ✅ IMPORTANT : PAS de fallback, uniquement executablePath dynamique
-      const executablePath = await chromiumAny.executablePath()
+      // ✅ FIX ROBUSTE (fonction OU string)
+      const executablePath =
+        typeof chromiumAny.executablePath === "function"
+          ? await chromiumAny.executablePath()
+          : chromiumAny.executablePath
 
       browser = await puppeteer.launch({
         args: chromiumAny.args,
         defaultViewport: chromiumAny.defaultViewport,
         executablePath,
-        headless: chromiumAny.headless,
+        headless: chromiumAny.headless ?? true,
       })
     } else {
       const puppeteer = await import("puppeteer")
