@@ -15,17 +15,14 @@ export async function searchKone(
 
       const chromiumAny = chromium as any
 
-      // ✅ FIX robuste executablePath
-      const executablePath =
-        typeof chromiumAny.executablePath === "function"
-          ? await chromiumAny.executablePath()
-          : chromiumAny.executablePath || "/usr/bin/chromium-browser"
+      // ✅ IMPORTANT : PAS de fallback, uniquement executablePath dynamique
+      const executablePath = await chromiumAny.executablePath()
 
       browser = await puppeteer.launch({
         args: chromiumAny.args,
         defaultViewport: chromiumAny.defaultViewport,
         executablePath,
-        headless: true,
+        headless: chromiumAny.headless,
       })
     } else {
       const puppeteer = await import("puppeteer")
@@ -100,7 +97,6 @@ export async function searchKone(
         })
         .filter(item => item.reference)
 
-      // 🔥 DETECTION PAGE SUIVANTE
       const hasMore = !!document.querySelector(".qa-ProductSelection-Next-Link")
 
       return { items, hasMore }
