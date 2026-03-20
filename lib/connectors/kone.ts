@@ -13,13 +13,18 @@ export async function searchKone(
       const puppeteer = await import("puppeteer-core")
       const chromium = await import("@sparticuz/chromium")
 
-      // ✅ FIX TYPE
       const chromiumAny = chromium as any
+
+      // ✅ FIX robuste executablePath
+      const executablePath =
+        typeof chromiumAny.executablePath === "function"
+          ? await chromiumAny.executablePath()
+          : chromiumAny.executablePath || "/usr/bin/chromium-browser"
 
       browser = await puppeteer.launch({
         args: chromiumAny.args,
         defaultViewport: chromiumAny.defaultViewport,
-        executablePath: await chromiumAny.executablePath(),
+        executablePath,
         headless: true,
       })
     } else {
@@ -66,32 +71,34 @@ export async function searchKone(
     const { items, hasMore } = await pageBrowser.evaluate(() => {
       const elements = Array.from(document.querySelectorAll('[id$="$$"]'))
 
-      const items = elements.map((el) => {
-        const refEl = el.querySelector('[class*="ProductNumber-Link"]')
-        const reference = refEl?.textContent?.trim() || ""
+      const items = elements
+        .map((el) => {
+          const refEl = el.querySelector('[class*="ProductNumber-Link"]')
+          const reference = refEl?.textContent?.trim() || ""
 
-        const titleEl = el.querySelector('[class*="Description"]')
-        const title = titleEl?.textContent?.trim() || ""
+          const titleEl = el.querySelector('[class*="Description"]')
+          const title = titleEl?.textContent?.trim() || ""
 
-        const imgEl = el.querySelector('img[data-src]')
-        let image = imgEl?.getAttribute("data-src") || ""
+          const imgEl = el.querySelector('img[data-src]')
+          let image = imgEl?.getAttribute("data-src") || ""
 
-        if (image && !image.startsWith("http")) {
-          image = "https://parts.kone.com" + image
-        }
+          if (image && !image.startsWith("http")) {
+            image = "https://parts.kone.com" + image
+          }
 
-        const link = reference
-          ? `https://parts.kone.com/Products/${reference}?searchMode=SpareParts`
-          : ""
+          const link = reference
+            ? `https://parts.kone.com/Products/${reference}?searchMode=SpareParts`
+            : ""
 
-        return {
-          supplier: "KONE",
-          reference,
-          title,
-          image,
-          link,
-        }
-      }).filter(item => item.reference)
+          return {
+            supplier: "KONE",
+            reference,
+            title,
+            image,
+            link,
+          }
+        })
+        .filter(item => item.reference)
 
       // 🔥 DETECTION PAGE SUIVANTE
       const hasMore = !!document.querySelector(".qa-ProductSelection-Next-Link")
