@@ -13,20 +13,29 @@ export async function searchKone(
       const puppeteer = await import("puppeteer-core")
       const chromium = await import("@sparticuz/chromium")
 
-      const chromiumAny = chromium as any
+      // 👉 typage local fiable
+      const chromiumAny = chromium as unknown as {
+        args: string[]
+        defaultViewport: any
+        executablePath: () => Promise<string> | string
+      }
 
-      // ✅ FIX ROBUSTE (fonction OU string)
       const executablePath =
         typeof chromiumAny.executablePath === "function"
           ? await chromiumAny.executablePath()
           : chromiumAny.executablePath
 
+      if (!executablePath) {
+        throw new Error("Chromium executablePath introuvable")
+      }
+
       browser = await puppeteer.launch({
         args: chromiumAny.args,
         defaultViewport: chromiumAny.defaultViewport,
         executablePath,
-        headless: chromiumAny.headless ?? true,
+        headless: true,
       })
+
     } else {
       const puppeteer = await import("puppeteer")
 
@@ -67,7 +76,7 @@ export async function searchKone(
       }
     }
 
-    // ================= PARSING + HASMORE =================
+    // ================= PARSING =================
     const { items, hasMore } = await pageBrowser.evaluate(() => {
       const elements = Array.from(document.querySelectorAll('[id$="$$"]'))
 
