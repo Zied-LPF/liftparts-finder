@@ -9,7 +9,6 @@ export async function searchKone(
   query: string,
   page: number = 1
 ): Promise<{ results: SupplierResult[]; hasMore: boolean }> {
-
   try {
     // ================= ENV =================
     if (process.env.VERCEL) {
@@ -18,7 +17,9 @@ export async function searchKone(
 
       const chromiumAny = chromium as any
 
-      executablePath = await chromiumAny.executablePath()
+      // ✅ executablePath est une valeur (PAS une fonction)
+      executablePath = await chromiumAny.executablePath
+
       args = chromiumAny.args
       defaultViewport = chromiumAny.defaultViewport
     } else {
@@ -39,22 +40,14 @@ export async function searchKone(
     try {
       const pageBrowser = await browser.newPage()
 
-      await pageBrowser.setUserAgent(
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
-      )
-
       // ================= NAVIGATION =================
       await pageBrowser.goto("https://parts.kone.com/", {
         waitUntil: "domcontentloaded",
       })
 
-      // ✅ ATTENDRE INPUT (IMPORTANT EN PROD)
       await pageBrowser.waitForSelector("#mstxtSearchSparePart", {
         timeout: 10000,
       })
-
-      // ✅ ANTI-BOT DELAY
-      await new Promise((res) => setTimeout(res, 1000))
 
       // ================= SEARCH =================
       await pageBrowser.type("#mstxtSearchSparePart", query)
@@ -77,16 +70,12 @@ export async function searchKone(
         }
       }
 
-      // ================= DEBUG (PROD SAFE) =================
-      const htmlLength = (await pageBrowser.content()).length
-      console.log("KONE HTML length:", htmlLength)
-
       // ================= PARSING =================
       const { items, hasMore } = await pageBrowser.evaluate(() => {
         const elements = Array.from(document.querySelectorAll('[id$="$$"]'))
 
         const items = elements
-          .map((el) => {
+          .map((el: any) => {
             const refEl = el.querySelector('[class*="ProductNumber-Link"]')
             const reference = refEl?.textContent?.trim() || ""
 
@@ -112,7 +101,7 @@ export async function searchKone(
               link,
             }
           })
-          .filter((item) => item.reference)
+          .filter((item: any) => item.reference)
 
         const hasMore = !!document.querySelector(
           ".qa-ProductSelection-Next-Link"
@@ -121,8 +110,6 @@ export async function searchKone(
         return { items, hasMore }
       })
 
-      console.log("KONE results count:", items.length)
-
       return {
         results: items,
         hasMore,
@@ -130,7 +117,6 @@ export async function searchKone(
     } finally {
       await browser.close()
     }
-
   } catch (error) {
     console.error("KONE error:", error)
     return { results: [], hasMore: false }
