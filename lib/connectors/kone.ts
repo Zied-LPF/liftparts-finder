@@ -10,20 +10,23 @@ export async function searchKone(
   page: number = 1
 ): Promise<{ results: SupplierResult[]; hasMore: boolean }> {
 
-  if (process.env.VERCEL) {
-    puppeteer = await import("puppeteer-core")
-    const chromium = await import("@sparticuz/chromium")
+ if (process.env.VERCEL) {
+  const puppeteer = await import("puppeteer-core")
+  const chromium = await import("@sparticuz/chromium")
 
-    executablePath = await chromium.executablePath()
-    args = chromium.args
-    defaultViewport = chromium.defaultViewport
-  } else {
-    puppeteer = await import("puppeteer")
+  // ✅ FIX TYPE TS (clé)
+  const chromiumAny = chromium as any
 
-    executablePath = undefined
-    args = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    defaultViewport = undefined
-  }
+  executablePath = await chromiumAny.executablePath()
+  args = chromiumAny.args
+  defaultViewport = chromiumAny.defaultViewport
+} else {
+  puppeteer = await import("puppeteer")
+
+  executablePath = undefined
+  args = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+  defaultViewport = undefined
+}
 
   const browser = await puppeteer.launch({
     headless: true,
