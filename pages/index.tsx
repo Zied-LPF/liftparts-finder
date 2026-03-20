@@ -18,6 +18,8 @@ function getLogoForSupplier(supplier: string): string | undefined {
       return "/logos/sodica.png"
     case "MGTI":          // 🔹 ajouté
       return "/logos/mgti.png"
+    case "KONE": // 🔥 ajouté
+      return "/logos/kone.png"
     default:
       return undefined
   }
@@ -40,7 +42,7 @@ export default function Home() {
 
   const [zoomImage, setZoomImage] = useState<string | null>(null)
 
-  const suppliers = ["MySodimas", "Elvacenter", "ElevatorShop", "Sodica", "MGTI"] // 🔹 MGTI ajouté
+  const suppliers = ["MySodimas", "Elvacenter", "ElevatorShop", "Sodica", "MGTI", "KONE"] // 🔹 MGTI ajouté
 
   // 🔹 Check cookie au chargement + après navigation
   useEffect(() => {

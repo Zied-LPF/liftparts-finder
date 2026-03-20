@@ -122,8 +122,8 @@ export async function searchMGTI(
     console.log(`MGTI page ${pageNumber} → ${data.items.length} résultats`);
 
     return {
-  	results: data.items,
- 	hasMore: data.hasMore
+       results: data.items,
+       hasMore: data.hasMore
     };
 
   } catch (err) {
