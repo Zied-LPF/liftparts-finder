@@ -1,49 +1,38 @@
 import type { SupplierResult } from "../types"
 
+let puppeteer: typeof import("puppeteer") | typeof import("puppeteer-core")
+let executablePath: string | undefined
+let args: string[] | undefined
+let defaultViewport: any
+
 export async function searchKone(
   query: string,
   page: number = 1
 ): Promise<{ results: SupplierResult[]; hasMore: boolean }> {
 
+  if (process.env.VERCEL) {
+    puppeteer = await import("puppeteer-core")
+    const chromium = await import("@sparticuz/chromium")
+
+    executablePath = await chromium.executablePath()
+    args = chromium.args
+    defaultViewport = chromium.defaultViewport
+  } else {
+    puppeteer = await import("puppeteer")
+
+    executablePath = undefined
+    args = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    defaultViewport = undefined
+  }
+
+  const browser = await puppeteer.launch({
+    headless: true,
+    args,
+    defaultViewport,
+    executablePath,
+  })
+
   try {
-    let browser
-
-    // ================= ENV =================
-    if (process.env.NODE_ENV === "production") {
-      const puppeteer = await import("puppeteer-core")
-      const chromium = await import("@sparticuz/chromium")
-
-      // 👉 typage local fiable
-      const chromiumAny = chromium as unknown as {
-        args: string[]
-        defaultViewport: any
-        executablePath: () => Promise<string> | string
-      }
-
-      const executablePath =
-        typeof chromiumAny.executablePath === "function"
-          ? await chromiumAny.executablePath()
-          : chromiumAny.executablePath
-
-      if (!executablePath) {
-        throw new Error("Chromium executablePath introuvable")
-      }
-
-      browser = await puppeteer.launch({
-        args: chromiumAny.args,
-        defaultViewport: chromiumAny.defaultViewport,
-        executablePath,
-        headless: true,
-      })
-
-    } else {
-      const puppeteer = await import("puppeteer")
-
-      browser = await puppeteer.launch({
-        headless: true,
-      })
-    }
-
     const pageBrowser = await browser.newPage()
 
     await pageBrowser.setUserAgent(
@@ -114,15 +103,15 @@ export async function searchKone(
       return { items, hasMore }
     })
 
-    await browser.close()
-
     return {
       results: items,
       hasMore
     }
 
-  } catch (error) {
-    console.error("KONE error:", error)
+  } catch (err) {
+    console.error("KONE Puppeteer error:", err)
     return { results: [], hasMore: false }
+  } finally {
+    await browser.close()
   }
 }
