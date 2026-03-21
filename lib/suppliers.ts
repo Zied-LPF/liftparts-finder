@@ -4,7 +4,9 @@ import { searchElvacenter } from './connectors/elvacenter'
 import { searchElevatorshop } from './connectors/elevatorshop'
 import { searchSodica } from './connectors/sodica'
 import { searchMGTI } from './connectors/mgti'
-import { searchKone } from './connectors/kone'   // 🔥 ajout KONE
+import { searchKone } from './connectors/kone'
+import { searchDonati } from './connectors/donati' // 🔥 ajouté
+
 import type { SupplierResult } from './types'
 
 export interface Supplier {
@@ -12,7 +14,7 @@ export interface Supplier {
   search: (query: string) => Promise<SupplierResult[]>
 }
 
-// 🔹 Wrapper générique pour adapter les connecteurs
+// 🔹 Wrapper générique
 async function unwrapResults(
   searchFn: (query: string) => Promise<{ results: SupplierResult[], hasMore: boolean }>,
   query: string
@@ -28,5 +30,6 @@ export const suppliers: Supplier[] = [
   { name: 'ElevatorShop', search: (query) => unwrapResults(searchElevatorshop, query) },
   { name: 'Sodica', search: (query) => unwrapResults(searchSodica, query) },
   { name: 'MGTI', search: (query) => unwrapResults(searchMGTI, query) },
-  { name: 'KONE', search: (query) => unwrapResults(searchKone, query) }   // 🔥 ajouté
+  { name: 'KONE', search: (query) => unwrapResults(searchKone, query) },
+  { name: 'Donati', search: (query) => unwrapResults(searchDonati, query) } // 🔥 ajouté
 ]

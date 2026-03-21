@@ -20,6 +20,8 @@ function getLogoForSupplier(supplier: string): string | undefined {
       return "/logos/mgti.png"
     case "KONE":
       return "/logos/kone.png"
+    case "Donati":
+      return "/logos/donati.png"
     default:
       return undefined
   }
@@ -42,7 +44,7 @@ export default function Home() {
 
   const [zoomImage, setZoomImage] = useState<string | null>(null)
 
-  const suppliers = ["MySodimas", "Elvacenter", "ElevatorShop", "Sodica", "MGTI", "KONE"]
+  const suppliers = ["MySodimas", "Elvacenter", "ElevatorShop", "Sodica", "MGTI", "KONE","Donati"]
 
   useEffect(() => {
     const checkAuth = () => setLoggedIn(document.cookie.includes('lpf_auth=1'))
