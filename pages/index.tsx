@@ -14,11 +14,11 @@ function getLogoForSupplier(supplier: string): string | undefined {
       return "/logos/elevatorshop.png"
     case "Elvacenter":
       return "/logos/elvacenter.png"
-    case "Sodica":        // 🔹 existant
+    case "Sodica":
       return "/logos/sodica.png"
-    case "MGTI":          // 🔹 ajouté
+    case "MGTI":
       return "/logos/mgti.png"
-    case "KONE": // 🔥 ajouté
+    case "KONE":
       return "/logos/kone.png"
     default:
       return undefined
@@ -42,9 +42,8 @@ export default function Home() {
 
   const [zoomImage, setZoomImage] = useState<string | null>(null)
 
-  const suppliers = ["MySodimas", "Elvacenter", "ElevatorShop", "Sodica", "MGTI", "KONE"] // 🔹 MGTI ajouté
+  const suppliers = ["MySodimas", "Elvacenter", "ElevatorShop", "Sodica", "MGTI", "KONE"]
 
-  // 🔹 Check cookie au chargement + après navigation
   useEffect(() => {
     const checkAuth = () => setLoggedIn(document.cookie.includes('lpf_auth=1'))
     checkAuth()
@@ -52,14 +51,12 @@ export default function Home() {
     return () => router.events.off('routeChangeComplete', checkAuth)
   }, [router.events])
 
-  // 🔹 Détection login immédiat via event custom
   useEffect(() => {
     const handleLoginEvent = () => setLoggedIn(true)
     window.addEventListener('lpf_login', handleLoginEvent)
     return () => window.removeEventListener('lpf_login', handleLoginEvent)
   }, [])
 
-  // 🔹 Login / Logout handlers
   const handleLogout = () => {
     document.cookie = 'lpf_auth=; Path=/; Max-Age=0;'
     setLoggedIn(false)
@@ -70,8 +67,10 @@ export default function Home() {
     router.push('/login')
   }
 
+  // ✅ VERSION PARALLÈLE SAFE
   const handleSearch = async () => {
     if (!query) return
+
     setLoading(true)
     setResults([])
     setPageSuppliers({})
@@ -79,17 +78,25 @@ export default function Home() {
     setLoadingSuppliers({})
 
     try {
-      for (const supplier of suppliers) {
+      const promises = suppliers.map(async (supplier) => {
         setLoadingSuppliers(prev => ({ ...prev, [supplier]: true }))
 
-        const res = await fetch(`/api/search-${supplier.toLowerCase()}?query=${encodeURIComponent(query)}&page=1`)
-        const data: { results: SupplierResult[]; hasMore: boolean } = await res.json()
+        try {
+          const res = await fetch(`/api/search-${supplier.toLowerCase()}?query=${encodeURIComponent(query)}&page=1`)
+          const data: { results: SupplierResult[]; hasMore: boolean } = await res.json()
 
-        setResults(prev => [...prev, ...(Array.isArray(data.results) ? data.results : [])])
-        setPageSuppliers(prev => ({ ...prev, [supplier]: 1 }))
-        setHasMoreSuppliers(prev => ({ ...prev, [supplier]: data.hasMore }))
+          setResults(prev => [...prev, ...(Array.isArray(data.results) ? data.results : [])])
+          setPageSuppliers(prev => ({ ...prev, [supplier]: 1 }))
+          setHasMoreSuppliers(prev => ({ ...prev, [supplier]: data.hasMore }))
+        } catch (err) {
+          console.error(`Erreur ${supplier}`, err)
+        }
+
         setLoadingSuppliers(prev => ({ ...prev, [supplier]: false }))
-      }
+      })
+
+      await Promise.all(promises)
+
     } catch (err) {
       console.error(err)
     }
@@ -141,6 +148,8 @@ export default function Home() {
   return (
     <div className={darkMode ? "dark" : ""}>
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+
+       
 
         {/* ================= HEADER ================= */}
         <header className="relative overflow-hidden">
