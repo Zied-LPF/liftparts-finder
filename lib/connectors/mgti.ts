@@ -1,39 +1,19 @@
 // lib/connectors/mgti.ts
 import type { SupplierResult } from "../types";
-
-let puppeteer: typeof import("puppeteer") | typeof import("puppeteer-core");
-let executablePath: string | undefined;
-let args: string[] | undefined;
-let defaultViewport: any;
+import { getBrowser } from "../puppeteer"; // ✅ AJOUT
 
 export async function searchMGTI(
   query: string,
   pageNumber: number = 1
 ): Promise<{ results: SupplierResult[]; hasMore: boolean }> {
 
-  // ✅ ENVIRONNEMENT (IDENTIQUE À ELEVATORSHOP)
-  if (process.env.VERCEL) {
-    puppeteer = require("puppeteer-core");
-    const chromium = require("@sparticuz/chromium");
-    executablePath = await chromium.executablePath();
-    args = chromium.args;
-    defaultViewport = chromium.defaultViewport;
-  } else {
-    puppeteer = require("puppeteer");
-    executablePath = undefined;
-    args = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"];
-    defaultViewport = undefined;
-  }
+  // ✅ PLUS DE puppeteer.launch ici
+  const browser = await getBrowser()
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args,
-    defaultViewport,
-    executablePath,
-  });
+  let page: any
 
   try {
-    const page = await browser.newPage();
+    page = await browser.newPage();
 
     await page.setUserAgent("Mozilla/5.0");
 
@@ -122,14 +102,14 @@ export async function searchMGTI(
     console.log(`MGTI page ${pageNumber} → ${data.items.length} résultats`);
 
     return {
-       results: data.items,
-       hasMore: data.hasMore
+      results: data.items,
+      hasMore: data.hasMore
     };
 
   } catch (err) {
     console.error("Erreur searchMGTI:", err);
     return { results: [], hasMore: false };
   } finally {
-    await browser.close();
+    if (page) await page.close(); // ✅ CRITIQUE (remplace browser.close)
   }
 }
