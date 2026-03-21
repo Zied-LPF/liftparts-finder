@@ -38,7 +38,7 @@ export async function searchMGTI(
 
     // 🔁 Pagination JS (si >1)
     if (pageNumber > 1) {
-      await page.evaluate((p) => {
+      await page.evaluate((p: number) => {
         (window as any).SearchGoToPage(p);
       }, pageNumber);
 

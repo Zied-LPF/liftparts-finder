@@ -4,9 +4,9 @@
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
   "/api/search-mysodimas": "pages/api/search-mysodimas.js",
-  "/api/search-elevatorshop": "pages/api/search-elevatorshop.js",
-  "/api/search-sodica": "pages/api/search-sodica.js",
   "/api/search-elvacenter": "pages/api/search-elvacenter.js",
+  "/api/search-elevatorshop": "pages/api/search-elevatorshop.js",
   "/api/search-mgti": "pages/api/search-mgti.js",
+  "/api/search-sodica": "pages/api/search-sodica.js",
   "/api/search-kone": "pages/api/search-kone.js"
 }
