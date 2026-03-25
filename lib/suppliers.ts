@@ -5,7 +5,8 @@ import { searchElevatorshop } from './connectors/elevatorshop'
 import { searchSodica } from './connectors/sodica'
 import { searchMGTI } from './connectors/mgti'
 import { searchKone } from './connectors/kone'
-import { searchDonati } from './connectors/donati' // 🔥 ajouté
+import { searchDonati } from './connectors/donati' 
+import { searchHissmekano } from './connectors/hissmekano'
 
 import type { SupplierResult } from './types'
 
@@ -31,5 +32,6 @@ export const suppliers: Supplier[] = [
   { name: 'Sodica', search: (query) => unwrapResults(searchSodica, query) },
   { name: 'MGTI', search: (query) => unwrapResults(searchMGTI, query) },
   { name: 'KONE', search: (query) => unwrapResults(searchKone, query) },
-  { name: 'Donati', search: (query) => unwrapResults(searchDonati, query) } // 🔥 ajouté
+  { name: 'Donati', search: (query) => unwrapResults(searchDonati, query) },
+  { name: 'Hissmekano', search: (query) => unwrapResults(searchHissmekano, query) }
 ]
