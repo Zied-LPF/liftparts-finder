@@ -4,12 +4,16 @@ import type { NextRequest } from 'next/server'
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // 🔹 Autoriser certaines routes
+  // Autoriser routes publiques + assets PWA
   if (
     pathname.startsWith('/login') ||
     pathname.startsWith('/api/login') ||
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon')
+    pathname.startsWith('/favicon') ||
+    pathname.startsWith('/icons') ||
+    pathname.startsWith('/logos') ||
+    pathname === '/manifest.json' ||
+    pathname === '/sw.js'
   ) {
     return NextResponse.next()
   }
