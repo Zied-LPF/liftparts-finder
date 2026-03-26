@@ -453,8 +453,9 @@ export default function Home() {
           )}
         </section>
 
-        {/* ── STATS BAR ── */}
+        {/* ── STATS BAR + DRAWER ── */}
         {hasSearched && (
+          <>
           <div style={S.statsBar} id="statsBar">
             <div style={S.statItem}>
               <span style={S.statNum}>{results.length}</span>
@@ -471,7 +472,6 @@ export default function Home() {
               </div>
             )}
             <div style={{ marginLeft: "auto", padding: "0 0 0 20px", display: "flex", alignItems: "center", gap: 10 }}>
-              {/* Bouton filtre mobile */}
               <button
                 id="mobileFilterBtn"
                 onClick={() => setShowMobileFilter(true)}
@@ -493,14 +493,8 @@ export default function Home() {
 
           {/* ── MOBILE FILTER DRAWER ── */}
           {showMobileFilter && (
-            <div
-              onClick={() => setShowMobileFilter(false)}
-              style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-            >
-              <div
-                onClick={e => e.stopPropagation()}
-                style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: T.bg2, borderRadius: "20px 20px 0 0", padding: "20px 20px 40px", maxHeight: "70vh", overflowY: "auto" }}
-              >
+            <div onClick={() => setShowMobileFilter(false)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
+              <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: T.bg2, borderRadius: "20px 20px 0 0", padding: "20px 20px 40px", maxHeight: "70vh", overflowY: "auto" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                   <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700 }}>Filtrer par fournisseur</span>
                   <button onClick={() => setShowMobileFilter(false)} style={{ background: "none", border: "none", color: T.text2, fontSize: 20, cursor: "pointer" }}>✕</button>
@@ -527,6 +521,7 @@ export default function Home() {
               </div>
             </div>
           )}
+          </>
         )}
 
         {/* ── MAIN LAYOUT ── */}
