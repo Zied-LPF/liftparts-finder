@@ -128,7 +128,9 @@ export default function Login() {
     <>
       <Head>
         <title>LiftParts Finder — Connexion</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#f97316" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
       <div style={{
