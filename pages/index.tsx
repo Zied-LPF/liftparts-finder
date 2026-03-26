@@ -419,7 +419,7 @@ export default function Home() {
 
           {/* Search bar */}
           <div style={S.searchRow} id="searchRow">
-            <span style={{ display: "flex", alignItems: "center", padding: "0 12px 0 10px", color: "#5a6070", fontSize: 18 }}>🔍</span>
+            <span id="searchIcon" style={{ display: "flex", alignItems: "center", padding: "0 12px 0 10px", color: "#5a6070", fontSize: 18 }}>🔍</span>
             <input
               type="text"
               value={query}
@@ -712,9 +712,9 @@ export default function Home() {
             #heroSection svg { height: 140px !important; }
 
             /* Search row full width */
-            #searchRow { border-radius: 10px !important; }
+            #searchRow { border-radius: 10px !important; padding: 4px !important; }
             #searchRow input { font-size: 14px !important; }
-            #searchRow button { padding: 8px 16px !important; font-size: 13px !important; }
+            #searchRow button { padding: 8px 12px !important; font-size: 13px !important; border-radius: 8px !important; }
 
             /* Stats bar scrollable */
             #statsBar { padding: 0 12px !important; }
@@ -740,9 +740,8 @@ export default function Home() {
             #historyRow { gap: 6px !important; }
             #historyRow button { font-size: 11px !important; padding: 3px 10px !important; }
 
-            /* Liste view sur mobile */
-            .list-item-img { width: 52px !important; height: 52px !important; }
-            .list-item-actions { display: none !important; }
+            /* Cacher icone loupe sur mobile pour gagner de la place */
+            #searchIcon { display: none !important; }
           }
 
           @media (max-width: 400px) {
