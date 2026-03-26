@@ -298,7 +298,7 @@ export default function Home() {
     hero: { padding: hasSearched ? "24px 24px 16px" : "48px 24px 36px", textAlign: "center" as const, transition: "padding .3s" },
     searchRow: { display: "flex", gap: 10, background: T.bg2, border: `1px solid ${T.border2}`, borderRadius: 14, padding: 6, boxShadow: "0 4px 24px rgba(0,0,0,0.2)", maxWidth: 680, margin: "0 auto" },
     searchInput: { flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: T.text, padding: "10px 0" } as React.CSSProperties,
-    searchBtn: { padding: "10px 24px", background: "#f97316", color: "#fff", border: "none", borderRadius: 10, fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" as const },
+    searchBtn: { padding: "10px 16px", background: "#f97316", color: "#fff", border: "none", borderRadius: 10, fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" as const },
     statsBar: { display: "flex", alignItems: "center", borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, padding: "0 24px", background: T.bg2, overflowX: "auto" as const },
     statItem: { display: "flex", alignItems: "center", gap: 8, padding: "12px 20px", whiteSpace: "nowrap" as const, borderRight: `1px solid ${T.border}`, fontSize: 13, color: T.text2 },
     statNum: { fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, color: T.text },
@@ -362,7 +362,7 @@ export default function Home() {
             : <span style={{ fontSize: 18, opacity: 0.2 }}>🔩</span>}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 500, marginBottom: 4, color: T.text }}>{title}</p>
+          <p style={{ fontSize: 13, fontWeight: 500, marginBottom: 4, color: T.text, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{title}</p>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" as const }}>
             {item.reference && <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: T.text3 }}>Réf: {item.reference}</span>}
             <StockBadge stock={item.stock} />
@@ -472,23 +472,34 @@ export default function Home() {
               </div>
             )}
             <div style={{ marginLeft: "auto", padding: "0 0 0 20px", display: "flex", alignItems: "center", gap: 10 }}>
-              <button
-                id="mobileFilterBtn"
-                onClick={() => setShowMobileFilter(true)}
-                style={{ display: "none", padding: "7px 12px", borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, fontSize: 13, color: T.text2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", alignItems: "center", gap: 6 }}
-              >
-                ⚙ Filtres {activeSupplier && <span style={{ background: "#f97316", color: "#fff", borderRadius: 100, padding: "1px 7px", fontSize: 11 }}>1</span>}
-              </button>
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={S.select}>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ ...S.select, display: "none" }} id="desktopSort">
                 <option value="pertinence">Pertinence</option>
                 <option value="stock">En stock d'abord</option>
                 <option value="az">A → Z</option>
               </select>
-              <div style={{ display: "flex", gap: 4 }}>
+              <div style={{ display: "flex", gap: 4 }} id="desktopViewToggle">
                 <button style={S.viewBtn(currentView === "grid")} onClick={() => setCurrentView("grid")}>⊞</button>
                 <button style={S.viewBtn(currentView === "list")} onClick={() => setCurrentView("list")}>☰</button>
               </div>
             </div>
+          </div>
+
+          {/* ── MOBILE TOOLBAR (Filtres + Tri + Vue) ── */}
+          <div id="mobileToolbar" style={{ display: "none", padding: "10px 12px", gap: 8, borderBottom: `1px solid ${T.border}`, background: T.bg2, alignItems: "center" }}>
+            <button
+              id="mobileFilterBtn"
+              onClick={() => setShowMobileFilter(true)}
+              style={{ display: "flex", padding: "8px 14px", borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, fontSize: 13, color: T.text2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", alignItems: "center", gap: 6, flexShrink: 0 }}
+            >
+              ⚙ Filtres {activeSupplier && <span style={{ background: "#f97316", color: "#fff", borderRadius: 100, padding: "1px 7px", fontSize: 11 }}>1</span>}
+            </button>
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ ...S.select, flex: 1 }}>
+              <option value="pertinence">Pertinence</option>
+              <option value="stock">En stock d'abord</option>
+              <option value="az">A → Z</option>
+            </select>
+            <button style={S.viewBtn(currentView === "grid")} onClick={() => setCurrentView("grid")}>⊞</button>
+            <button style={S.viewBtn(currentView === "list")} onClick={() => setCurrentView("list")}>☰</button>
           </div>
 
           {/* ── MOBILE FILTER DRAWER ── */}
@@ -685,9 +696,10 @@ export default function Home() {
 
           /* ── MOBILE RESPONSIVE ── */
           @media (max-width: 768px) {
-            /* Sidebar cachée sur mobile */
             aside { display: none !important; }
-            /* Bouton filtre visible sur mobile */
+            #mobileToolbar { display: flex !important; }
+            #desktopSort { display: none !important; }
+            #desktopViewToggle { display: none !important; }
             #mobileFilterBtn { display: flex !important; }
 
             /* Layout pleine largeur */
