@@ -119,7 +119,8 @@ const SUPPLIERS = ["mysodimas", "elvacenter", "elevatorshop", "donati", "sodica"
 
 const SUPPLIER_COLORS: Record<string, string> = {
   mysodimas: "#f97316", elvacenter: "#3b82f6", elevatorshop: "#22c55e",
-  donati: "#a855f7", sodica: "#ec4899", mgti: "#14b8a6", kone: "#f59e0b", hissmekano: "#06b6d4", liftshop: "#10b981", default: "#6b7280"
+  donati: "#a855f7", sodica: "#ec4899", mgti: "#14b8a6", kone: "#f59e0b",
+  hissmekano: "#06b6d4", liftshop: "#10b981", google: "#ea4335", default: "#6b7280"
 }
 
 function normalize(s: string) { return s.toLowerCase().replace(/\s/g, "") }
@@ -151,6 +152,8 @@ export default function Home() {
   const [searchHistory, setSearchHistory] = useState<string[]>([])
   const [hasSearched, setHasSearched] = useState(false)
   const [darkMode, setDarkMode] = useState(true)
+  const [googleResults, setGoogleResults] = useState<SupplierResult[]>([])
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   // Auth
   useEffect(() => {
@@ -188,6 +191,7 @@ export default function Home() {
     if (!query || !loggedIn) return
     setLoading(true)
     setResults([])
+    setGoogleResults([])
     setPageSuppliers({})
     setHasMoreSuppliers({})
     setLoadingSuppliers({})
@@ -208,6 +212,21 @@ export default function Home() {
     })
     await Promise.all(promises)
     setLoading(false)
+
+    // Fallback Google : si aucun résultat trouvé chez les fournisseurs
+    setResults(prev => {
+      if (prev.length === 0) {
+        setGoogleLoading(true)
+        fetch(`/api/search-google?query=${encodeURIComponent(query)}&page=1`)
+          .then(r => r.json())
+          .then((data: { results: SupplierResult[]; hasMore: boolean }) => {
+            setGoogleResults(Array.isArray(data.results) ? data.results : [])
+          })
+          .catch(err => console.error("Google fallback error:", err))
+          .finally(() => setGoogleLoading(false))
+      }
+      return prev
+    })
   }
 
   const loadMore = async (supplier: string) => {
@@ -371,7 +390,7 @@ export default function Home() {
       <div style={S.page}>
 
         {/* ── TOPBAR ── */}
-        <header style={S.topbar}>
+        <header style={S.topbar} id="topbar">
           <a href="#" onClick={e => { e.preventDefault(); resetSearch() }} style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
             <LPFLogo height={38} />
           </a>
@@ -389,7 +408,7 @@ export default function Home() {
         </header>
 
         {/* ── HERO ── */}
-        <section style={S.hero}>
+        <section style={S.hero} id="heroSection">
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
             <LPFLogo height={220} />
           </div>
@@ -398,7 +417,7 @@ export default function Home() {
           </p>
 
           {/* Search bar */}
-          <div style={S.searchRow}>
+          <div style={S.searchRow} id="searchRow">
             <span style={{ display: "flex", alignItems: "center", padding: "0 12px 0 10px", color: "#5a6070", fontSize: 18 }}>🔍</span>
             <input
               type="text"
@@ -435,7 +454,7 @@ export default function Home() {
 
         {/* ── STATS BAR ── */}
         {hasSearched && (
-          <div style={S.statsBar}>
+          <div style={S.statsBar} id="statsBar">
             <div style={S.statItem}>
               <span style={S.statNum}>{results.length}</span>
               <span>résultats</span>
@@ -466,7 +485,7 @@ export default function Home() {
 
         {/* ── MAIN LAYOUT ── */}
         {hasSearched && (
-          <div style={S.layout}>
+          <div style={S.layout} id="mainLayout">
 
             {/* Sidebar */}
             <aside style={S.sidebar}>
@@ -495,7 +514,7 @@ export default function Home() {
             </aside>
 
             {/* Content */}
-            <main style={S.content}>
+            <main style={S.content} id="contentArea">
 
               {loading && (
                 <div style={{ display: "flex", justifyContent: "center", padding: 60 }}>
@@ -527,7 +546,7 @@ export default function Home() {
 
                     {/* Grid or List */}
                     {currentView === "grid" ? (
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
+                      <div className="results-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
                         {items.map((item, i) => <PartCard key={i} item={item} />)}
                       </div>
                     ) : (
@@ -548,6 +567,58 @@ export default function Home() {
                   </div>
                 )
               })}
+
+              {/* ── GOOGLE FALLBACK ── */}
+              {!loading && results.length === 0 && (googleLoading || googleResults.length > 0) && (
+                <div style={{ marginBottom: 40 }}>
+                  {/* Header Google */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, paddingBottom: 14, borderBottom: `1px solid ${T.border}` }}>
+                    <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ea4335", display: "inline-block", flexShrink: 0 }} />
+                    <svg width="16" height="16" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 15, fontWeight: 700 }}>Google</span>
+                    {googleLoading
+                      ? <span style={{ fontSize: 12, color: T.text2 }}>Recherche en cours…</span>
+                      : <span style={{ fontSize: 12, fontFamily: "'DM Mono', monospace", background: T.bg4, color: T.text2, padding: "3px 10px", borderRadius: 100 }}>{googleResults.length} résultats</span>
+                    }
+                    <span style={{ fontSize: 11, color: T.text3, marginLeft: 4 }}>— Aucun résultat chez nos fournisseurs</span>
+                  </div>
+
+                  {googleLoading && (
+                    <div style={{ display: "flex", justifyContent: "center", padding: 40 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: "50%", border: "3px solid #1e2330", borderTopColor: "#ea4335", animation: "spin .7s linear infinite" }} />
+                    </div>
+                  )}
+
+                  {/* Résultats Google en liste */}
+                  {!googleLoading && googleResults.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {googleResults.map((item, i) => (
+                        <div key={i} style={{ ...S.listItem, cursor: "default" }}>
+                          <div style={{ width: 56, height: 56, flexShrink: 0, background: T.bg3, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                            {item.image
+                              ? <img src={item.image} alt={item.title} style={{ maxWidth: 48, maxHeight: 48, objectFit: "contain" }} onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
+                              : <svg width="20" height="20" viewBox="0 0 24 24" opacity="0.3"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                            }
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: 13, fontWeight: 500, marginBottom: 3, color: T.text }}>{item.title}</p>
+                            <p style={{ fontSize: 11, color: T.text3, marginBottom: 0 }}>{item.source}</p>
+                          </div>
+                          <a href={item.link} target="_blank" rel="noopener noreferrer"
+                            style={{ padding: "7px 14px", borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, fontSize: 12, color: T.text2, textDecoration: "none", whiteSpace: "nowrap" as const, flexShrink: 0 }}>
+                            Voir →
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </main>
           </div>
         )}
@@ -570,6 +641,59 @@ export default function Home() {
           .list-item:hover { border-color: ${T.border2} !important; }
           .card-link:hover { background: #f97316 !important; border-color: #f97316 !important; color: #fff !important; }
           .load-more-btn:hover { border-color: rgba(249,115,22,0.3) !important; color: #f97316 !important; }
+
+          /* ── MOBILE RESPONSIVE ── */
+          @media (max-width: 768px) {
+            /* Sidebar cachée sur mobile */
+            aside { display: none !important; }
+
+            /* Layout pleine largeur */
+            #mainLayout { padding: 0 12px !important; }
+
+            /* Hero compact */
+            #heroSection { padding: 16px 12px 12px !important; }
+
+            /* Logo plus petit sur mobile */
+            #heroSection svg { height: 140px !important; }
+
+            /* Search row full width */
+            #searchRow { border-radius: 10px !important; }
+            #searchRow input { font-size: 14px !important; }
+            #searchRow button { padding: 8px 16px !important; font-size: 13px !important; }
+
+            /* Stats bar scrollable */
+            #statsBar { padding: 0 12px !important; }
+            #statsBar > div { padding: 10px 12px !important; }
+
+            /* Grille 2 colonnes sur mobile */
+            .results-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+
+            /* Cards plus compactes */
+            .card-img { height: 120px !important; }
+            .card-body { padding: 10px !important; }
+
+            /* Content padding réduit */
+            #contentArea { padding: 12px !important; }
+
+            /* Supplier header wrap */
+            .supplier-header { flex-wrap: wrap !important; gap: 8px !important; }
+
+            /* Topbar compact */
+            #topbar { padding: 0 12px !important; gap: 10px !important; }
+
+            /* History pills */
+            #historyRow { gap: 6px !important; }
+            #historyRow button { font-size: 11px !important; padding: 3px 10px !important; }
+
+            /* Liste view sur mobile */
+            .list-item-img { width: 52px !important; height: 52px !important; }
+            .list-item-actions { display: none !important; }
+          }
+
+          @media (max-width: 400px) {
+            .results-grid { grid-template-columns: 1fr !important; }
+            #heroSection svg { height: 110px !important; }
+          }
         `}</style>
       </div>
     </>
