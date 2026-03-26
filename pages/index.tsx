@@ -472,7 +472,7 @@ export default function Home() {
               </div>
             )}
             <div style={{ marginLeft: "auto", padding: "0 0 0 20px", display: "flex", alignItems: "center", gap: 10 }}>
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ ...S.select, display: "none" }} id="desktopSort">
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={S.select} id="desktopSort">
                 <option value="pertinence">Pertinence</option>
                 <option value="stock">En stock d'abord</option>
                 <option value="az">A → Z</option>
