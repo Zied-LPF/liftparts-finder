@@ -152,6 +152,7 @@ export default function Home() {
   const [searchHistory, setSearchHistory] = useState<string[]>([])
   const [hasSearched, setHasSearched] = useState(false)
   const [darkMode, setDarkMode] = useState(true)
+  const [showMobileFilter, setShowMobileFilter] = useState(false)
   const [googleResults, setGoogleResults] = useState<SupplierResult[]>([])
   const [googleLoading, setGoogleLoading] = useState(false)
 
@@ -470,6 +471,14 @@ export default function Home() {
               </div>
             )}
             <div style={{ marginLeft: "auto", padding: "0 0 0 20px", display: "flex", alignItems: "center", gap: 10 }}>
+              {/* Bouton filtre mobile */}
+              <button
+                id="mobileFilterBtn"
+                onClick={() => setShowMobileFilter(true)}
+                style={{ display: "none", padding: "7px 12px", borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, fontSize: 13, color: T.text2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", alignItems: "center", gap: 6 }}
+              >
+                ⚙ Filtres {activeSupplier && <span style={{ background: "#f97316", color: "#fff", borderRadius: 100, padding: "1px 7px", fontSize: 11 }}>1</span>}
+              </button>
               <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={S.select}>
                 <option value="pertinence">Pertinence</option>
                 <option value="stock">En stock d'abord</option>
@@ -481,6 +490,43 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          {/* ── MOBILE FILTER DRAWER ── */}
+          {showMobileFilter && (
+            <div
+              onClick={() => setShowMobileFilter(false)}
+              style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+            >
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: T.bg2, borderRadius: "20px 20px 0 0", padding: "20px 20px 40px", maxHeight: "70vh", overflowY: "auto" }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                  <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700 }}>Filtrer par fournisseur</span>
+                  <button onClick={() => setShowMobileFilter(false)} style={{ background: "none", border: "none", color: T.text2, fontSize: 20, cursor: "pointer" }}>✕</button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <button style={S.supBtn(!activeSupplier)} onClick={() => { setActiveSupplier(""); setShowMobileFilter(false) }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#6b7280", flexShrink: 0 }} />
+                    Tous
+                    <span style={{ marginLeft: "auto", fontSize: 11, fontFamily: "'DM Mono', monospace", background: T.bg4, padding: "2px 7px", borderRadius: 100 }}>{results.length}</span>
+                  </button>
+                  {Object.entries(allGrouped).map(([sup, items]) => {
+                    const key = normalize(sup)
+                    const color = SUPPLIER_COLORS[key] || SUPPLIER_COLORS.default
+                    const isActive = activeSupplier === key
+                    return (
+                      <button key={sup} style={S.supBtn(isActive)} onClick={() => { setActiveSupplier(isActive ? "" : key); setShowMobileFilter(false) }}>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                        {sup}
+                        <span style={{ marginLeft: "auto", fontSize: 11, fontFamily: "'DM Mono', monospace", background: T.bg4, padding: "2px 7px", borderRadius: 100 }}>{items.length}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         )}
 
         {/* ── MAIN LAYOUT ── */}
@@ -646,6 +692,8 @@ export default function Home() {
           @media (max-width: 768px) {
             /* Sidebar cachée sur mobile */
             aside { display: none !important; }
+            /* Bouton filtre visible sur mobile */
+            #mobileFilterBtn { display: flex !important; }
 
             /* Layout pleine largeur */
             #mainLayout { padding: 0 12px !important; }
