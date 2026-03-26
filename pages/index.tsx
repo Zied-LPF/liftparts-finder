@@ -115,11 +115,11 @@ const LPFLogo = ({ height = 44 }: { height?: number }) => (
 )
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const SUPPLIERS = ["mysodimas", "elvacenter", "elevatorshop", "donati", "sodica", "mgti", "kone", "hissmekano"]
+const SUPPLIERS = ["mysodimas", "elvacenter", "elevatorshop", "donati", "sodica", "mgti", "kone", "hissmekano", "liftshop"]
 
 const SUPPLIER_COLORS: Record<string, string> = {
   mysodimas: "#f97316", elvacenter: "#3b82f6", elevatorshop: "#22c55e",
-  donati: "#a855f7", sodica: "#ec4899", mgti: "#14b8a6", kone: "#f59e0b", hissmekano: "#06b6d4", default: "#6b7280"
+  donati: "#a855f7", sodica: "#ec4899", mgti: "#14b8a6", kone: "#f59e0b", hissmekano: "#06b6d4", liftshop: "#10b981", default: "#6b7280"
 }
 
 function normalize(s: string) { return s.toLowerCase().replace(/\s/g, "") }
@@ -129,7 +129,7 @@ function getLogoForSupplier(supplier: string): string | undefined {
     MySodimas: "/logos/mysodimas.png", ElevatorShop: "/logos/elevatorshop.png",
     Elvacenter: "/logos/elvacenter.png", Sodica: "/logos/sodica.png",
     MGTI: "/logos/mgti.png", KONE: "/logos/kone.png", Donati: "/logos/donati.png",
-    Hissmekano: "/logos/hissmekano.png"
+    Hissmekano: "/logos/hissmekano.png", LiftShop: "/logos/liftshop.png"
   }
   return map[supplier]
 }

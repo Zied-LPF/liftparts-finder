@@ -7,6 +7,7 @@ import { searchMGTI } from './connectors/mgti'
 import { searchKone } from './connectors/kone'
 import { searchDonati } from './connectors/donati' 
 import { searchHissmekano } from './connectors/hissmekano'
+import { searchLiftshop } from './connectors/liftshop'
 
 import type { SupplierResult } from './types'
 
@@ -33,5 +34,6 @@ export const suppliers: Supplier[] = [
   { name: 'MGTI', search: (query) => unwrapResults(searchMGTI, query) },
   { name: 'KONE', search: (query) => unwrapResults(searchKone, query) },
   { name: 'Donati', search: (query) => unwrapResults(searchDonati, query) },
-  { name: 'Hissmekano', search: (query) => unwrapResults(searchHissmekano, query) }
+  { name: 'Hissmekano', search: (query) => unwrapResults(searchHissmekano, query) },
+  { name: 'LiftShop', search: (query) => unwrapResults(searchLiftshop, query) }
 ]
