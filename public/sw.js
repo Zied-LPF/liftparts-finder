@@ -3,7 +3,6 @@ const CACHE_NAME = 'lpf-v1'
 const STATIC_ASSETS = [
   '/',
   '/login',
-  '/logos/LiftParts-Finder.png',
   '/icons/icon-192.png',
   '/icons/icon-512.png'
 ]
