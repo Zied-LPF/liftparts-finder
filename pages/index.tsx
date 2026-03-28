@@ -201,7 +201,7 @@ export default function Home() {
     setHasSearched(true)
     addHistory(q)
 
-    await Promise.all(SUPPLIERS.map(async (supplier) => {
+    SUPPLIERS.forEach(async (supplier) => {
       setLoadingSuppliers(prev => ({ ...prev, [supplier]: true }))
       try {
         const res = await fetch(`/api/search-${supplier}?query=${encodeURIComponent(q)}&page=1`)
@@ -214,7 +214,7 @@ export default function Home() {
       } finally {
         setLoadingSuppliers(prev => ({ ...prev, [supplier]: false }))
       }
-    }))
+    })
 
     setLoading(false)
   }, [query, loggedIn, addHistory])
@@ -245,33 +245,34 @@ export default function Home() {
   }
 
   // ── Image search ───────────────────────────────────────────────────────────
-  const handleImageSelect = async (f: globalThis.File) => {
-    if (typeof window === "undefined") return
-    if (!f.type.startsWith("image/")) {
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve((reader.result as string).split(",")[1])
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+
+  const handleImageSelect = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
       setImageError("Fichier non valide. Utilisez une image JPG, PNG ou WEBP.")
       return
     }
-    if (f.size > 10 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       setImageError("Image trop lourde (max 10 MB)")
       return
     }
     setImageError(null)
     setImageAnalysis(null)
-    const previewUrl = window.URL.createObjectURL(f)
+    const previewUrl = URL.createObjectURL(file)
     setImagePreview(previewUrl)
     setImageLoading(true)
     try {
-      // Conversion base64 sans FileReader (compatible SSR)
-      const arrayBuffer = await f.arrayBuffer()
-      const bytes = new Uint8Array(arrayBuffer)
-      let binary = ""
-      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
-      const base64 = btoa(binary)
-
+      const base64 = await fileToBase64(file)
       const response = await fetch("/api/analyze-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64, mimeType: f.type })
+        body: JSON.stringify({ imageBase64: base64, mimeType: file.type })
       })
       if (!response.ok) {
         const err = await response.json()
@@ -291,7 +292,7 @@ export default function Home() {
   }
 
   const resetImageSearch = () => {
-    if (typeof window !== "undefined" && imagePreview) window.URL.revokeObjectURL(imagePreview)
+    if (imagePreview) URL.revokeObjectURL(imagePreview)
     setImagePreview(null)
     setImageAnalysis(null)
     setImageError(null)
@@ -455,8 +456,8 @@ export default function Home() {
 
           @media (max-width: 640px) {
             #mainLayout { padding: 0 12px !important; }
-            #heroSection { padding: 16px 12px 12px !important; }
-            #heroSection svg { height: 140px !important; }
+            #heroSection { padding: 16px 12px 8px !important; }
+            #heroLogo { height: 100px !important; }
             #searchRow { border-radius: 10px !important; padding: 4px !important; }
             #searchRow input { font-size: 14px !important; }
             #searchRow button { padding: 8px 12px !important; font-size: 13px !important; border-radius: 8px !important; }
@@ -471,22 +472,21 @@ export default function Home() {
             #historyRow { gap: 6px !important; }
             #historyRow button { font-size: 11px !important; padding: 3px 10px !important; }
             #searchIcon { display: none !important; }
-            #imageSearchBar { padding: 4px !important; gap: 6px !important; }
-            #imageSearchBar button { padding: 8px 10px !important; font-size: 12px !important; gap: 4px !important; }
-            #imageSearchBar button svg { width: 12px !important; height: 12px !important; }
-            #imageSearchBar > div p { font-size: 11px !important; }
+            #imageSearchBar { padding: 4px !important; }
+            #imageSearchBar button { padding: 8px 10px !important; font-size: 12px !important; }
             aside { display: none !important; }
           }
           @media (max-width: 400px) {
             .results-grid { grid-template-columns: 1fr !important; }
-            #heroSection svg { height: 110px !important; }
+            #heroLogo { height: 80px !important; }
           }
         `}</style>
 
         {/* ── TOPBAR ── */}
         <header style={S.topbar} id="topbar">
-          <a href="#" onClick={e => { e.preventDefault(); resetSearch() }} style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
-            <img src="/logos/lpf-logo.png" alt="LPF" style={{ height: 38, width: "auto" }} />
+          <a href="#" onClick={e => { e.preventDefault(); resetSearch() }} style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, color: "#f97316", letterSpacing: 1 }}>LPF</span>
+            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, fontWeight: 500, color: T.text3, letterSpacing: "0.12em", textTransform: "uppercase" as const, lineHeight: 1.3 }}>LiftParts<br/>Finder</span>
           </a>
           <div style={{ flex: 1 }} />
           <button onClick={() => setDarkMode(!darkMode)}
@@ -501,8 +501,13 @@ export default function Home() {
 
         {/* ── HERO ── */}
         <section style={S.hero} id="heroSection">
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
-            <img src="/logos/lpf-logo.png" alt="LiftParts Finder" style={{ height: 220, width: "auto", maxWidth: "100%" }} />
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+            <img
+              src="/logos/lpf-logo.png"
+              alt="LiftParts Finder"
+              style={{ height: 160, width: "auto", maxWidth: "90vw" }}
+              id="heroLogo"
+            />
           </div>
           <p style={{ fontSize: 14, color: "#8b92a8", marginBottom: 24 }}>
             Agrégateur multi-fournisseurs — Elvacenter, Donati, ElevatorShop, Sodica, MGTI & plus
@@ -645,10 +650,7 @@ export default function Home() {
                 )}
                 {!imageLoading && !imagePreview && !imageError && (
                   <p style={{ flex: 1, textAlign: "center" as const, fontSize: 12, color: T.text3, margin: 0 }}>
-                    <span className="img-bar-hint-long" style={{ display: "inline" }}>Importez ou photographiez une pièce — l'IA identifie la référence</span>
-                    <style>{`@media(max-width:640px){.img-bar-hint-long{display:none!important}}`}</style>
-                    <span className="img-bar-hint-short" style={{ display: "none" }}>Photo ou import — IA identifie la pièce</span>
-                    <style>{`@media(max-width:640px){.img-bar-hint-short{display:inline!important}}`}</style>
+                    Importez ou photographiez une pièce — l'IA identifie la référence
                   </p>
                 )}
                 {!imageLoading && imageError && (
@@ -765,7 +767,11 @@ export default function Home() {
 
             {/* Content */}
             <main style={S.content} id="contentArea">
-
+              {loading && (
+                <div style={{ display: "flex", justifyContent: "center", padding: 60 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", border: "3px solid #1e2330", borderTopColor: "#f97316", animation: "spin .7s linear infinite" }} />
+                </div>
+              )}
 
               {!loading && results.length === 0 && hasSearched && (
                 <div style={{ textAlign: "center", padding: "80px 40px" }}>
