@@ -486,7 +486,7 @@ export default function Home() {
         {/* ── TOPBAR ── */}
         <header style={S.topbar} id="topbar">
           <a href="#" onClick={e => { e.preventDefault(); resetSearch() }} style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
-            <LPFLogo height={38} />
+            <img src="/logos/lpf-logo.png" alt="LPF" style={{ height: 38, width: "auto" }} />
           </a>
           <div style={{ flex: 1 }} />
           <button onClick={() => setDarkMode(!darkMode)}
@@ -502,7 +502,7 @@ export default function Home() {
         {/* ── HERO ── */}
         <section style={S.hero} id="heroSection">
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
-            <LPFLogo height={220} />
+            <img src="/logos/lpf-logo.png" alt="LiftParts Finder" style={{ height: 220, width: "auto", maxWidth: "100%" }} />
           </div>
           <p style={{ fontSize: 14, color: "#8b92a8", marginBottom: 24 }}>
             Agrégateur multi-fournisseurs — Elvacenter, Donati, ElevatorShop, Sodica, MGTI & plus
