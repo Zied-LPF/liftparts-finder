@@ -471,8 +471,10 @@ export default function Home() {
             #historyRow { gap: 6px !important; }
             #historyRow button { font-size: 11px !important; padding: 3px 10px !important; }
             #searchIcon { display: none !important; }
-            #imageSearchBar { padding: 4px !important; }
-            #imageSearchBar button { padding: 8px 10px !important; font-size: 12px !important; }
+            #imageSearchBar { padding: 4px !important; gap: 6px !important; }
+            #imageSearchBar button { padding: 8px 10px !important; font-size: 12px !important; gap: 4px !important; }
+            #imageSearchBar button svg { width: 12px !important; height: 12px !important; }
+            #imageSearchBar > div p { font-size: 11px !important; }
             aside { display: none !important; }
           }
           @media (max-width: 400px) {
@@ -643,7 +645,10 @@ export default function Home() {
                 )}
                 {!imageLoading && !imagePreview && !imageError && (
                   <p style={{ flex: 1, textAlign: "center" as const, fontSize: 12, color: T.text3, margin: 0 }}>
-                    Importez ou photographiez une pièce — l'IA identifie la référence
+                    <span className="img-bar-hint-long" style={{ display: "inline" }}>Importez ou photographiez une pièce — l'IA identifie la référence</span>
+                    <style>{`@media(max-width:640px){.img-bar-hint-long{display:none!important}}`}</style>
+                    <span className="img-bar-hint-short" style={{ display: "none" }}>Photo ou import — IA identifie la pièce</span>
+                    <style>{`@media(max-width:640px){.img-bar-hint-short{display:inline!important}}`}</style>
                   </p>
                 )}
                 {!imageLoading && imageError && (
