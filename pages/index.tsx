@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback } from "react"
+import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/router"
 import Head from "next/head"
 import type { SupplierResult } from "../lib/types"
@@ -42,38 +42,6 @@ const LPFLogo = ({ height = 44 }: { height?: number }) => (
       <rect x="76" y="80" width="8" height="4" rx="1" /><rect x="76" y="104" width="8" height="4" rx="1" />
       <rect x="76" y="128" width="8" height="4" rx="1" /><rect x="76" y="152" width="8" height="4" rx="1" />
     </g>
-    <rect x="40" y="72" width="40" height="52" rx="4" fill="#1e2840" stroke="#f97316" strokeWidth="1.5" filter="url(#glogh)" />
-    <line x1="60" y1="76" x2="60" y2="120" stroke="#f97316" strokeWidth="0.8" strokeOpacity="0.6" />
-    <rect x="40" y="72" width="40" height="6" rx="2" fill="#f97316" opacity="0.9" />
-    <rect x="46" y="84" width="12" height="10" rx="2" fill="#0d1018" stroke="#f97316" strokeWidth="0.8" strokeOpacity="0.5" />
-    <rect x="62" y="84" width="12" height="10" rx="2" fill="#0d1018" stroke="#f97316" strokeWidth="0.8" strokeOpacity="0.5" />
-    <circle cx="50" cy="104" r="1.5" fill="#f97316" opacity="0.9" />
-    <line x1="50" y1="40" x2="50" y2="72" stroke="#8b92a8" strokeWidth="1" strokeOpacity="0.5" />
-    <line x1="55" y1="40" x2="55" y2="72" stroke="#8b92a8" strokeWidth="1" strokeOpacity="0.5" />
-    <line x1="62" y1="40" x2="62" y2="72" stroke="#8b92a8" strokeWidth="1" strokeOpacity="0.5" />
-    <g fill="#f97316" opacity="0.7" filter="url(#glogh)">
-      <polygon points="59,46 64,56 54,56" /><polygon points="59,38 64,48 54,48" opacity="0.4" />
-    </g>
-    <g stroke="#2a3040" strokeWidth="1">
-      <line x1="32" y1="126" x2="86" y2="126" /><line x1="32" y1="172" x2="86" y2="172" />
-      <line x1="32" y1="218" x2="86" y2="218" />
-    </g>
-    <g fontFamily="Arial" fontSize="7" fill="#3a4050" textAnchor="middle">
-      <text x="28" y="130">3</text><text x="28" y="176">2</text><text x="28" y="222">1</text>
-    </g>
-    <g transform="translate(100,58)" opacity="0.55">
-      <circle r="11" fill="none" stroke="#f97316" strokeWidth="1.5" />
-      <circle r="5" fill="none" stroke="#f97316" strokeWidth="1" />
-      <g fill="#f97316">
-        <rect x="-2" y="-13" width="4" height="5" rx="1" /><rect x="-2" y="8" width="4" height="5" rx="1" />
-        <rect x="8" y="-2" width="5" height="4" rx="1" /><rect x="-13" y="-2" width="5" height="4" rx="1" />
-      </g>
-    </g>
-    <g transform="translate(106,155)" opacity="0.4">
-      <rect x="-4" y="-10" width="8" height="20" rx="3" fill="none" stroke="#8b92a8" strokeWidth="1.2" />
-      <line x1="-6" y1="-4" x2="6" y2="-4" stroke="#8b92a8" strokeWidth="1.2" />
-      <line x1="-6" y1="0" x2="6" y2="0" stroke="#8b92a8" strokeWidth="1.2" />
-    </g>
     <g transform="translate(100,195)" opacity="0.35">
       <circle r="8" fill="none" stroke="#f97316" strokeWidth="1.2" />
       <circle r="3.5" fill="none" stroke="#f97316" strokeWidth="0.8" />
@@ -102,7 +70,10 @@ const LPFLogo = ({ height = 44 }: { height?: number }) => (
       <line x1="19" y1="19" x2="32" y2="32" stroke="#f97316" strokeWidth="3.5" strokeLinecap="round" />
       <line x1="19" y1="19" x2="32" y2="32" stroke="#fb923c" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
     </g>
-    <line x1="120" y1="134" x2="450" y2="134" stroke="url(#ogh)" strokeWidth="2" strokeLinecap="round" />
+    <linearGradient id="ogl" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stopColor="#fb923c" /><stop offset="100%" stopColor="#ea6a0a" />
+    </linearGradient>
+    <line x1="120" y1="134" x2="450" y2="134" stroke="url(#ogl)" strokeWidth="2" strokeLinecap="round" />
     <circle cx="120" cy="134" r="2.5" fill="#fb923c" />
     <circle cx="450" cy="134" r="2.5" fill="#ea6a0a" />
     <text x="285" y="155" fontFamily="'Arial',sans-serif" fontSize="15.5" fontWeight="700" letterSpacing="9.5" textAnchor="middle" fill="#f0f2f7" opacity="0.92">LIFTPARTS FINDER</text>
@@ -135,9 +106,30 @@ function getLogoForSupplier(supplier: string): string | undefined {
   return map[supplier]
 }
 
+// ─── StockBadge ──────────────────────────────────────────────────────────────
+function StockBadge({ stock }: { stock?: string }) {
+  if (!stock) return null
+  const inStock = !/backorder|out.of.stock|rupture/i.test(stock)
+  return (
+    <span style={{
+      fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 100,
+      background: inStock ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
+      color: inStock ? "#22c55e" : "#ef4444", letterSpacing: "0.04em"
+    }}>
+      {inStock ? "En stock" : "Rupture"}
+    </span>
+  )
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function Home() {
   const router = useRouter()
+
+  // ── Fix hydration : mounted guard ──────────────────────────────────────────
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
+  // ── États principaux ───────────────────────────────────────────────────────
   const [loggedIn, setLoggedIn] = useState(false)
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<SupplierResult[]>([])
@@ -156,7 +148,15 @@ export default function Home() {
   const [googleResults, setGoogleResults] = useState<SupplierResult[]>([])
   const [googleLoading, setGoogleLoading] = useState(false)
 
-  // Auth
+  // ── États recherche image ──────────────────────────────────────────────────
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageAnalysis, setImageAnalysis] = useState<any>(null)
+  const [imageLoading, setImageLoading] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+
+  // ── Auth ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     const check = () => setLoggedIn(document.cookie.includes("lpf_auth=1"))
     check()
@@ -170,7 +170,7 @@ export default function Home() {
     return () => window.removeEventListener("lpf_login", handler)
   }, [])
 
-  // History
+  // ── History ────────────────────────────────────────────────────────────────
   useEffect(() => {
     try { setSearchHistory(JSON.parse(localStorage.getItem("lpf_history") || "[]")) } catch {}
   }, [])
@@ -187,9 +187,10 @@ export default function Home() {
     router.push("/login")
   }
 
-  // Search
-  const handleSearch = async () => {
-    if (!query || !loggedIn) return
+  // ── Search ─────────────────────────────────────────────────────────────────
+  const handleSearch = useCallback(async (overrideQuery?: string) => {
+    const q = overrideQuery || query
+    if (!q || !loggedIn) return
     setLoading(true)
     setResults([])
     setGoogleResults([])
@@ -198,62 +199,110 @@ export default function Home() {
     setLoadingSuppliers({})
     setActiveSupplier("")
     setHasSearched(true)
-    addHistory(query)
+    addHistory(q)
 
-    const promises = SUPPLIERS.map(async (supplier) => {
+    await Promise.all(SUPPLIERS.map(async (supplier) => {
       setLoadingSuppliers(prev => ({ ...prev, [supplier]: true }))
       try {
-        const res = await fetch(`/api/search-${supplier}?query=${encodeURIComponent(query)}&page=1`)
+        const res = await fetch(`/api/search-${supplier}?query=${encodeURIComponent(q)}&page=1`)
         const data: { results: SupplierResult[]; hasMore: boolean } = await res.json()
         setResults(prev => [...prev, ...(Array.isArray(data.results) ? data.results : [])])
-        setPageSuppliers(prev => ({ ...prev, [supplier]: 1 }))
         setHasMoreSuppliers(prev => ({ ...prev, [supplier]: data.hasMore }))
-      } catch (err) { console.error(`Erreur ${supplier}`, err) }
-      setLoadingSuppliers(prev => ({ ...prev, [supplier]: false }))
-    })
-    await Promise.all(promises)
-    setLoading(false)
-
-    // Fallback Google : si aucun résultat trouvé chez les fournisseurs
-    setResults(prev => {
-      if (prev.length === 0) {
-        setGoogleLoading(true)
-        fetch(`/api/search-google?query=${encodeURIComponent(query)}&page=1`)
-          .then(r => r.json())
-          .then((data: { results: SupplierResult[]; hasMore: boolean }) => {
-            setGoogleResults(Array.isArray(data.results) ? data.results : [])
-          })
-          .catch(err => console.error("Google fallback error:", err))
-          .finally(() => setGoogleLoading(false))
+        setPageSuppliers(prev => ({ ...prev, [supplier]: 1 }))
+      } catch (err) {
+        console.error(`Search error for ${supplier}:`, err)
+      } finally {
+        setLoadingSuppliers(prev => ({ ...prev, [supplier]: false }))
       }
-      return prev
-    })
-  }
+    }))
 
-  const loadMore = async (supplier: string) => {
-    if (!query || !hasMoreSuppliers[supplier]) return
-    setLoadingSuppliers(prev => ({ ...prev, [supplier]: true }))
+    setLoading(false)
+  }, [query, loggedIn, addHistory])
+
+  const loadMore = async (supplierSlug: string) => {
+    const nextPage = (pageSuppliers[supplierSlug] || 1) + 1
+    setLoadingSuppliers(prev => ({ ...prev, [supplierSlug]: true }))
     try {
-      const nextPage = (pageSuppliers[supplier] || 1) + 1
-      const res = await fetch(`/api/search-${supplier}?query=${encodeURIComponent(query)}&page=${nextPage}`)
+      const res = await fetch(`/api/search-${supplierSlug}?query=${encodeURIComponent(query)}&page=${nextPage}`)
       const data: { results: SupplierResult[]; hasMore: boolean } = await res.json()
       setResults(prev => [...prev, ...(Array.isArray(data.results) ? data.results : [])])
-      setPageSuppliers(prev => ({ ...prev, [supplier]: nextPage }))
-      setHasMoreSuppliers(prev => ({ ...prev, [supplier]: data.hasMore }))
-    } catch (err) { console.error(err) }
-    setLoadingSuppliers(prev => ({ ...prev, [supplier]: false }))
+      setHasMoreSuppliers(prev => ({ ...prev, [supplierSlug]: data.hasMore }))
+      setPageSuppliers(prev => ({ ...prev, [supplierSlug]: nextPage }))
+    } catch (err) {
+      console.error(`Load more error for ${supplierSlug}:`, err)
+    } finally {
+      setLoadingSuppliers(prev => ({ ...prev, [supplierSlug]: false }))
+    }
   }
 
   const resetSearch = () => {
-    setQuery(""); setResults([]); setActiveSupplier(""); setHasSearched(false)
-    setPageSuppliers({}); setHasMoreSuppliers({}); setLoadingSuppliers({})
+    setQuery("")
+    setResults([])
+    setGoogleResults([])
+    setHasSearched(false)
+    setActiveSupplier("")
+    resetImageSearch()
   }
 
-  // Sort & filter
+  // ── Image search ───────────────────────────────────────────────────────────
+  const handleImageSelect = async (f: globalThis.File) => {
+    if (typeof window === "undefined") return
+    if (!f.type.startsWith("image/")) {
+      setImageError("Fichier non valide. Utilisez une image JPG, PNG ou WEBP.")
+      return
+    }
+    if (f.size > 10 * 1024 * 1024) {
+      setImageError("Image trop lourde (max 10 MB)")
+      return
+    }
+    setImageError(null)
+    setImageAnalysis(null)
+    const previewUrl = window.URL.createObjectURL(f)
+    setImagePreview(previewUrl)
+    setImageLoading(true)
+    try {
+      // Conversion base64 sans FileReader (compatible SSR)
+      const arrayBuffer = await f.arrayBuffer()
+      const bytes = new Uint8Array(arrayBuffer)
+      let binary = ""
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
+      const base64 = btoa(binary)
+
+      const response = await fetch("/api/analyze-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64, mimeType: f.type })
+      })
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || "Erreur analyse")
+      }
+      const data = await response.json()
+      setImageAnalysis(data)
+      if (data.searchQuery) {
+        setQuery(data.searchQuery)
+        setTimeout(() => handleSearch(data.searchQuery), 100)
+      }
+    } catch (err: any) {
+      setImageError(err.message || "Erreur lors de l'analyse")
+    } finally {
+      setImageLoading(false)
+    }
+  }
+
+  const resetImageSearch = () => {
+    if (typeof window !== "undefined" && imagePreview) window.URL.revokeObjectURL(imagePreview)
+    setImagePreview(null)
+    setImageAnalysis(null)
+    setImageError(null)
+    setImageLoading(false)
+  }
+
+  // ── Computed ───────────────────────────────────────────────────────────────
   const sortedResults = useMemo(() => {
-    let sorted = [...results]
-    if (sortBy === "az") sorted.sort((a, b) => (a.designation || a.title || "").localeCompare(b.designation || b.title || ""))
-    if (sortBy === "stock") sorted.sort((a, b) => (b.stock ? 1 : 0) - (a.stock ? 1 : 0))
+    const sorted = [...results]
+    if (sortBy === "az") sorted.sort((a, b) => a.title.localeCompare(b.title))
+    else if (sortBy === "stock") sorted.sort((a, b) => (b.stock ? 1 : 0) - (a.stock ? 1 : 0))
     return sorted
   }, [results, sortBy])
 
@@ -279,7 +328,7 @@ export default function Home() {
 
   const inStockCount = results.filter(r => r.stock && !/backorder/i.test(r.stock)).length
 
-  // ─── Theme colors ──────────────────────────────────────────────────────────
+  // ── Theme ──────────────────────────────────────────────────────────────────
   const T = darkMode ? {
     bg: "#0a0b0d", bg2: "#111318", bg3: "#181c24", bg4: "#1e2330",
     border: "rgba(255,255,255,0.07)", border2: "rgba(255,255,255,0.13)",
@@ -290,7 +339,7 @@ export default function Home() {
     text: "#0f1117", text2: "#52596e", text3: "#9aa0b0",
   }
 
-  // ─── Styles ────────────────────────────────────────────────────────────────
+  // ── Styles ─────────────────────────────────────────────────────────────────
   const S = {
     page: { minHeight: "100vh", background: T.bg, color: T.text, fontFamily: "'DM Sans', sans-serif", transition: "background .25s, color .25s" } as React.CSSProperties,
     topbar: { position: "sticky" as const, top: 0, zIndex: 100, height: 60, background: darkMode ? "rgba(10,11,13,0.95)" : "rgba(244,245,247,0.95)", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 20, backdropFilter: "blur(12px)" },
@@ -299,51 +348,56 @@ export default function Home() {
     searchRow: { display: "flex", gap: 10, background: T.bg2, border: `1px solid ${T.border2}`, borderRadius: 14, padding: 6, boxShadow: "0 4px 24px rgba(0,0,0,0.2)", maxWidth: 680, margin: "0 auto" },
     searchInput: { flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: T.text, padding: "10px 0" } as React.CSSProperties,
     searchBtn: { padding: "10px 16px", background: "#f97316", color: "#fff", border: "none", borderRadius: 10, fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" as const },
+    imageBar: { display: "flex", gap: 10, background: T.bg2, border: `1px solid ${T.border2}`, borderRadius: 14, padding: 6, boxShadow: "0 4px 24px rgba(0,0,0,0.2)", maxWidth: 680, margin: "4px auto 0", alignItems: "center" } as React.CSSProperties,
+    imageBtn: { display: "flex", alignItems: "center", gap: 7, padding: "10px 16px", background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 13, fontWeight: 500, color: T.text2, cursor: "pointer", whiteSpace: "nowrap" as const, fontFamily: "'DM Sans', sans-serif", transition: "all .2s", flexShrink: 0 } as React.CSSProperties,
+    imagePreviewWrap: { flex: 1, display: "flex", alignItems: "center", gap: 10, minWidth: 0, padding: "0 4px" } as React.CSSProperties,
     statsBar: { display: "flex", alignItems: "center", borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, padding: "0 24px", background: T.bg2, overflowX: "auto" as const },
     statItem: { display: "flex", alignItems: "center", gap: 8, padding: "12px 20px", whiteSpace: "nowrap" as const, borderRight: `1px solid ${T.border}`, fontSize: 13, color: T.text2 },
     statNum: { fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, color: T.text },
     layout: { display: "flex", maxWidth: 1400, width: "100%", margin: "0 auto", padding: "0 24px" },
     sidebar: { width: 260, flexShrink: 0, padding: "24px 20px", borderRight: `1px solid ${T.border}`, position: "sticky" as const, top: 60, height: "calc(100vh - 60px)", overflowY: "auto" as const },
     sidebarTitle: { fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: T.text3, marginBottom: 12 },
-    supBtn: (active: boolean) => ({ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, border: active ? "1px solid rgba(249,115,22,0.3)" : `1px solid transparent`, background: active ? "rgba(249,115,22,0.1)" : "transparent", cursor: "pointer", textAlign: "left" as const, width: "100%", color: active ? "#f97316" : T.text2, fontSize: 13, transition: "all .15s", fontFamily: "'DM Sans', sans-serif" }),
-    content: { flex: 1, padding: 24, minWidth: 0 },
-    card: { background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column" as const, cursor: "pointer", transition: "border-color .2s, box-shadow .2s, transform .2s" },
-    cardImgWrap: { height: 180, background: T.bg3, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" },
-    cardBody: { padding: 16, flex: 1, display: "flex", flexDirection: "column" as const, gap: 7 },
-    badge: (type: "stock" | "backorder" | "supplier") => {
-      const map = { stock: { bg: "rgba(34,197,94,0.1)", color: "#22c55e" }, backorder: { bg: "rgba(245,158,11,0.1)", color: "#f59e0b" }, supplier: { bg: T.bg4, color: T.text2 } }
-      return { padding: "3px 8px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: map[type].bg, color: map[type].color } as React.CSSProperties
-    },
-    link: { display: "block", textAlign: "center" as const, padding: 10, background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 12, fontWeight: 500, color: T.text2, textDecoration: "none", marginTop: "auto", transition: "all .2s" },
-    listItem: { background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", gap: 16, transition: "border-color .2s", cursor: "pointer" },
-    select: { padding: "7px 12px", borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, color: T.text, fontSize: 13, cursor: "pointer", outline: "none", fontFamily: "'DM Sans', sans-serif" } as React.CSSProperties,
-    viewBtn: (active: boolean) => ({ width: 32, height: 32, borderRadius: 7, background: active ? "rgba(249,115,22,0.1)" : T.bg3, border: `1px solid ${active ? "rgba(249,115,22,0.3)" : T.border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, color: active ? "#f97316" : T.text2 } as React.CSSProperties),
+    supBtn: (active: boolean) => ({ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, border: active ? "1px solid rgba(249,115,22,0.3)" : `1px solid transparent`, background: active ? "rgba(249,115,22,0.1)" : "transparent", cursor: "pointer", textAlign: "left" as const, width: "100%", color: active ? "#f97316" : T.text2, fontSize: 13, fontFamily: "'DM Sans', sans-serif", transition: "all .15s" } as React.CSSProperties),
+    content: { flex: 1, padding: "24px 0 24px 32px", minWidth: 0 },
+    card: { background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden", cursor: "pointer", transition: "border-color .2s, transform .15s", display: "flex", flexDirection: "column" as const },
+    listItem: { background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", transition: "border-color .2s" },
+    badge: (type: string) => ({ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 100, background: type === "supplier" ? T.bg4 : "rgba(249,115,22,0.1)", color: type === "supplier" ? T.text3 : "#f97316", letterSpacing: "0.04em" } as React.CSSProperties),
+    select: { background: T.bg3, border: `1px solid ${T.border}`, borderRadius: 8, padding: "6px 10px", fontSize: 13, color: T.text2, outline: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer" } as React.CSSProperties,
+    mobileToolbar: { display: "none" },
   }
 
-  const StockBadge = ({ stock }: { stock?: string }) => {
-    if (!stock) return null
-    const isBackorder = /backorder/i.test(stock)
-    return <span style={S.badge(isBackorder ? "backorder" : "stock")}>{isBackorder ? "Backorder" : stock}</span>
-  }
-
-  const PartCard = ({ item }: { item: SupplierResult }) => {
-    const title = item.designation || item.title || "Sans désignation"
+  // ── PartCard ───────────────────────────────────────────────────────────────
+  function PartCard({ item }: { item: SupplierResult }) {
+    const title = item.designation || item.title
+    const key = normalize(item.supplier)
+    const color = SUPPLIER_COLORS[key] || SUPPLIER_COLORS.default
     return (
-      <div style={S.card} onClick={() => item.image && setZoomImage(item.image)}>
-        <div style={S.cardImgWrap}>
+      <div className="card-body" style={S.card}
+        onClick={() => item.link && window.open(item.link, "_blank")}
+        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = color; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)" }}
+        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = T.border; (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)" }}>
+        <div className="card-img" style={{ height: 160, background: T.bg3, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
           {item.image
-            ? <img src={item.image} alt={title} style={{ maxHeight: 140, maxWidth: "90%", objectFit: "contain" }} onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
-            : <span style={{ fontSize: 12, color: T.text3 }}>Pas d'image</span>}
+            ? <img src={item.image} alt={title} style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                onClick={e => { e.stopPropagation(); setZoomImage(item.image!) }}
+                onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
+            : <span style={{ fontSize: 32, opacity: 0.15 }}>🔩</span>}
+          <span style={{ position: "absolute", top: 8, right: 8, width: 8, height: 8, borderRadius: "50%", background: color }} />
         </div>
-        <div style={S.cardBody}>
-          <p style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, color: T.text }}>{title}</p>
-          {item.reference && <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: T.text3 }}>Réf: {item.reference}</p>}
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, marginTop: 2 }}>
+        <div style={{ padding: "14px 14px 12px", display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+          <p style={{ fontSize: 13, fontWeight: 500, color: T.text, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden", margin: 0 }}>{title}</p>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, alignItems: "center" }}>
+            {item.reference && <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: T.text3 }}>Réf: {item.reference}</span>}
             <StockBadge stock={item.stock} />
+          </div>
+          <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={S.badge("supplier")}>{item.supplier}</span>
+            {item.price && <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 700, color: "#f97316" }}>{item.price}€</span>}
           </div>
           {item.link && (
-            <a href={item.link} target="_blank" rel="noopener noreferrer" style={S.link} onClick={e => e.stopPropagation()}>
+            <a href={item.link} target="_blank" rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              style={{ display: "block", textAlign: "center", padding: "7px", borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, fontSize: 12, color: T.text2, textDecoration: "none", marginTop: 4 }}>
               Voir le produit →
             </a>
           )}
@@ -352,11 +406,15 @@ export default function Home() {
     )
   }
 
-  const ListItem = ({ item }: { item: SupplierResult }) => {
-    const title = item.designation || item.title || "Sans désignation"
+  // ── ListItem ───────────────────────────────────────────────────────────────
+  function ListItem({ item }: { item: SupplierResult }) {
+    const title = item.designation || item.title
     return (
-      <div style={S.listItem} onClick={() => item.image && setZoomImage(item.image)}>
-        <div style={{ width: 72, height: 72, flexShrink: 0, background: T.bg3, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+      <div style={S.listItem}
+        onClick={() => item.link && window.open(item.link, "_blank")}
+        onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.borderColor = T.border2}
+        onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.borderColor = T.border}>
+        <div style={{ width: 56, height: 56, flexShrink: 0, background: T.bg3, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
           {item.image
             ? <img src={item.image} alt={title} style={{ maxWidth: 62, maxHeight: 62, objectFit: "contain" }} onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
             : <span style={{ fontSize: 18, opacity: 0.2 }}>🔩</span>}
@@ -380,15 +438,48 @@ export default function Home() {
     )
   }
 
+  // ── Hydration guard ────────────────────────────────────────────────────────
+  if (!mounted) return null
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
       <Head>
         <title>LiftParts Finder</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
 
       <div style={S.page}>
+        <style>{`
+          @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+          @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+          @media (max-width: 640px) {
+            #mainLayout { padding: 0 12px !important; }
+            #heroSection { padding: 16px 12px 12px !important; }
+            #heroSection svg { height: 140px !important; }
+            #searchRow { border-radius: 10px !important; padding: 4px !important; }
+            #searchRow input { font-size: 14px !important; }
+            #searchRow button { padding: 8px 12px !important; font-size: 13px !important; border-radius: 8px !important; }
+            #statsBar { padding: 0 12px !important; }
+            #statsBar > div { padding: 10px 12px !important; }
+            .results-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+            .card-img { height: 120px !important; }
+            .card-body { padding: 10px !important; }
+            #contentArea { padding: 12px !important; }
+            .supplier-header { flex-wrap: wrap !important; gap: 8px !important; }
+            #topbar { padding: 0 12px !important; gap: 10px !important; }
+            #historyRow { gap: 6px !important; }
+            #historyRow button { font-size: 11px !important; padding: 3px 10px !important; }
+            #searchIcon { display: none !important; }
+            #imageSearchBar { padding: 4px !important; }
+            #imageSearchBar button { padding: 8px 10px !important; font-size: 12px !important; }
+            aside { display: none !important; }
+          }
+          @media (max-width: 400px) {
+            .results-grid { grid-template-columns: 1fr !important; }
+            #heroSection svg { height: 110px !important; }
+          }
+        `}</style>
 
         {/* ── TOPBAR ── */}
         <header style={S.topbar} id="topbar">
@@ -396,11 +487,9 @@ export default function Home() {
             <LPFLogo height={38} />
           </a>
           <div style={{ flex: 1 }} />
-          <button
-            onClick={() => setDarkMode(!darkMode)}
+          <button onClick={() => setDarkMode(!darkMode)}
             style={{ ...S.btn(), width: 36, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}
-            title="Changer de thème"
-          >
+            title="Changer de thème">
             {darkMode ? "🌙" : "☀️"}
           </button>
           <button style={S.btn()} onClick={loggedIn ? handleLogout : () => router.push("/login")}>
@@ -417,20 +506,30 @@ export default function Home() {
             Agrégateur multi-fournisseurs — Elvacenter, Donati, ElevatorShop, Sodica, MGTI & plus
           </p>
 
-          {/* Search bar */}
+          {/* Barre recherche texte */}
           <div style={S.searchRow} id="searchRow">
-            <span id="searchIcon" style={{ display: "flex", alignItems: "center", padding: "0 12px 0 10px", color: "#5a6070", fontSize: 18 }}>🔍</span>
+            <span id="searchIcon" style={{ display: "flex", alignItems: "center", padding: "0 12px 0 10px", color: "#5a6070", fontSize: 18 }}>
+              {loading
+                ? <div style={{ width: 18, height: 18, border: "2.5px solid rgba(249,115,22,0.25)", borderTopColor: "#f97316", borderRadius: "50%", animation: "spin .7s linear infinite" }} />
+                : "🔍"}
+            </span>
             <input
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleSearch()}
-              placeholder={loggedIn ? "Référence, marque ou désignation..." : "Connectez-vous pour rechercher..."}
+              placeholder={loading ? "Recherche en cours…" : loggedIn ? "Référence, marque ou désignation..." : "Connectez-vous pour rechercher..."}
               disabled={!loggedIn}
               style={{ ...S.searchInput, opacity: loggedIn ? 1 : 0.5 }}
             />
-            <button onClick={handleSearch} disabled={!loggedIn || loading} style={{ ...S.searchBtn, opacity: (!loggedIn || loading) ? 0.5 : 1, cursor: (!loggedIn || loading) ? "not-allowed" : "pointer" }}>
-              {loading ? "Recherche…" : "Rechercher"}
+            <button onClick={() => handleSearch()} disabled={!loggedIn || loading}
+              style={{ ...S.searchBtn, opacity: (!loggedIn || loading) ? 0.5 : 1, cursor: (!loggedIn || loading) ? "not-allowed" : "pointer" }}>
+              {loading
+                ? <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    <div style={{ width: 13, height: 13, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin .7s linear infinite" }} />
+                    Recherche…
+                  </span>
+                : "Rechercher"}
             </button>
           </div>
 
@@ -440,105 +539,199 @@ export default function Home() {
             </p>
           )}
 
-          {/* History pills */}
-          {searchHistory.length > 0 && (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", marginTop: 14 }}>
-              {searchHistory.map(h => (
-                <button key={h} onClick={() => { setQuery(h); setTimeout(handleSearch, 0) }}
-                  style={{ padding: "4px 12px", borderRadius: 100, background: "#181c24", border: "1px solid rgba(255,255,255,0.07)", fontSize: 12, color: "#8b92a8", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-                  ↺ {h}
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* ── STATS BAR + DRAWER ── */}
-        {hasSearched && (
-          <>
-          <div style={S.statsBar} id="statsBar">
-            <div style={S.statItem}>
-              <span style={S.statNum}>{results.length}</span>
-              <span>résultats</span>
-            </div>
-            <div style={S.statItem}>
-              <span style={S.statNum}>{Object.keys(allGrouped).length}</span>
-              <span>fournisseurs</span>
-            </div>
-            {inStockCount > 0 && (
-              <div style={S.statItem}>
-                <span style={{ ...S.statNum, color: "#22c55e" }}>{inStockCount}</span>
-                <span>en stock</span>
+          {/* Search wrapper avec autocomplete */}
+          <div style={{ position: "relative", maxWidth: 680, margin: "0 auto" }}>
+            {/* Dropdown autocomplete historique */}
+            {searchHistory.length > 0 && query.length > 0 && (
+              <div style={{
+                position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50,
+                background: T.bg2, border: `1px solid ${T.border2}`,
+                borderRadius: 12, overflow: "hidden",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.3)"
+              }}>
+                {searchHistory
+                  .filter(h => h.toLowerCase().includes(query.toLowerCase()) && h !== query)
+                  .slice(0, 5)
+                  .map(h => (
+                    <button key={h}
+                      onClick={() => { setQuery(h); setTimeout(() => handleSearch(h), 0) }}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 10, width: "100%",
+                        padding: "10px 16px", background: "none", border: "none",
+                        borderBottom: `1px solid ${T.border}`, color: T.text2,
+                        fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                        textAlign: "left" as const
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = T.bg3)}
+                      onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                    >
+                      <span style={{ color: T.text3, fontSize: 12 }}>↺</span>
+                      {h}
+                    </button>
+                  ))}
               </div>
             )}
-            <div style={{ marginLeft: "auto", padding: "0 0 0 20px", display: "flex", alignItems: "center", gap: 10 }}>
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={S.select} id="desktopSort">
-                <option value="pertinence">Pertinence</option>
-                <option value="stock">En stock d'abord</option>
-                <option value="az">A → Z</option>
-              </select>
-              <div style={{ display: "flex", gap: 4 }} id="desktopViewToggle">
-                <button style={S.viewBtn(currentView === "grid")} onClick={() => setCurrentView("grid")}>⊞</button>
-                <button style={S.viewBtn(currentView === "list")} onClick={() => setCurrentView("list")}>☰</button>
-              </div>
-            </div>
           </div>
 
-          {/* ── MOBILE TOOLBAR (Filtres + Tri + Vue) ── */}
-          <div id="mobileToolbar" style={{ display: "none", padding: "10px 12px", gap: 8, borderBottom: `1px solid ${T.border}`, background: T.bg2, alignItems: "center" }}>
-            <button
-              id="mobileFilterBtn"
-              onClick={() => setShowMobileFilter(true)}
-              style={{ display: "flex", padding: "8px 14px", borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, fontSize: 13, color: T.text2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", alignItems: "center", gap: 6, flexShrink: 0 }}
-            >
-              ⚙ Filtres {activeSupplier && <span style={{ background: "#f97316", color: "#fff", borderRadius: 100, padding: "1px 7px", fontSize: 11 }}>1</span>}
-            </button>
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ ...S.select, flex: 1 }}>
-              <option value="pertinence">Pertinence</option>
-              <option value="stock">En stock d'abord</option>
-              <option value="az">A → Z</option>
-            </select>
-            <button style={S.viewBtn(currentView === "grid")} onClick={() => setCurrentView("grid")}>⊞</button>
-            <button style={S.viewBtn(currentView === "list")} onClick={() => setCurrentView("list")}>☰</button>
-          </div>
+          {/* ── BARRE RECHERCHE PAR IMAGE (toujours visible) ── */}
+          <div style={{ maxWidth: 680, margin: "0 auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0 4px", opacity: 0.4 }}>
+              <div style={{ flex: 1, height: 1, background: T.border }} />
+              <span style={{ fontSize: 10, color: T.text3, letterSpacing: "0.1em", fontFamily: "'DM Sans', sans-serif", textTransform: "uppercase" as const }}>Recherche par image IA</span>
+              <div style={{ flex: 1, height: 1, background: T.border }} />
+            </div>
 
-          {/* ── MOBILE FILTER DRAWER ── */}
-          {showMobileFilter && (
-            <div onClick={() => setShowMobileFilter(false)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
-              <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: T.bg2, borderRadius: "20px 20px 0 0", padding: "20px 20px 40px", maxHeight: "70vh", overflowY: "auto" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-                  <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700 }}>Filtrer par fournisseur</span>
-                  <button onClick={() => setShowMobileFilter(false)} style={{ background: "none", border: "none", color: T.text2, fontSize: 20, cursor: "pointer" }}>✕</button>
+            <div style={S.imageBar} id="imageSearchBar">
+              <input ref={imageInputRef} type="file" accept="image/*" style={{ display: "none" }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleImageSelect(f); e.target.value = "" }} />
+              <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleImageSelect(f); e.target.value = "" }} />
+
+              {/* Bouton Upload */}
+              <button style={S.imageBtn} onClick={() => imageInputRef.current?.click()} disabled={imageLoading || !loggedIn}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Importer
+              </button>
+
+              {/* Zone centrale */}
+              <div style={S.imagePreviewWrap}>
+                {imageLoading && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, background: T.bg3, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ width: 16, height: 16, border: `2px solid ${T.border2}`, borderTopColor: "#f97316", borderRadius: "50%", animation: "spin .7s linear infinite" }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 13, color: T.text, margin: 0, fontWeight: 500 }}>Analyse IA en cours…</p>
+                      <p style={{ fontSize: 11, color: T.text3, margin: "2px 0 0" }}>Gemini 1.5 Pro identifie la pièce</p>
+                    </div>
+                  </div>
+                )}
+                {!imageLoading && imagePreview && imageAnalysis && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                    <img src={imagePreview} alt="pièce analysée"
+                      style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover", flexShrink: 0, border: `1px solid ${T.border}` }} />
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" as const, marginBottom: 3 }}>
+                        {imageAnalysis.analysis?.brand && (
+                          <span style={{ fontSize: 11, fontWeight: 600, color: "#f97316", background: "rgba(249,115,22,0.1)", padding: "2px 8px", borderRadius: 100, fontFamily: "'DM Mono', monospace" }}>
+                            {imageAnalysis.analysis.brand}
+                          </span>
+                        )}
+                        {imageAnalysis.analysis?.reference && (
+                          <span style={{ fontSize: 11, color: T.text2, fontFamily: "'DM Mono', monospace", background: T.bg3, padding: "2px 8px", borderRadius: 100 }}>
+                            {imageAnalysis.analysis.reference}
+                          </span>
+                        )}
+                        <span style={{
+                          fontSize: 11, padding: "2px 8px", borderRadius: 100,
+                          background: imageAnalysis.analysis?.confidence === "high" ? "rgba(34,197,94,0.1)" : imageAnalysis.analysis?.confidence === "medium" ? "rgba(249,115,22,0.1)" : "rgba(107,114,128,0.1)",
+                          color: imageAnalysis.analysis?.confidence === "high" ? "#22c55e" : imageAnalysis.analysis?.confidence === "medium" ? "#f97316" : T.text3
+                        }}>
+                          {imageAnalysis.analysis?.confidence === "high" ? "✓ Haute confiance" : imageAnalysis.analysis?.confidence === "medium" ? "~ Confiance moyenne" : "? Faible confiance"}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 12, color: T.text2, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                        {imageAnalysis.analysis?.partType} — {imageAnalysis.searchQuery}
+                      </p>
+                    </div>
+                    <button onClick={resetImageSearch}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: T.text3, fontSize: 20, padding: 4, flexShrink: 0, lineHeight: 1 }}>×</button>
+                  </div>
+                )}
+                {!imageLoading && !imagePreview && !imageError && (
+                  <p style={{ flex: 1, textAlign: "center" as const, fontSize: 12, color: T.text3, margin: 0 }}>
+                    Importez ou photographiez une pièce — l'IA identifie la référence
+                  </p>
+                )}
+                {!imageLoading && imageError && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+                    <span style={{ fontSize: 12, color: "#ef4444" }}>⚠ {imageError}</span>
+                    <button onClick={resetImageSearch} style={{ background: "none", border: "none", cursor: "pointer", color: T.text3, fontSize: 16 }}>×</button>
+                  </div>
+                )}
+              </div>
+
+              {/* Bouton Caméra */}
+              <button style={{ ...S.imageBtn, background: "#f97316", color: "#fff", border: "none" }}
+                onClick={() => cameraInputRef.current?.click()} disabled={imageLoading || !loggedIn}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 0 2-2l2-2h8l2 2a2 2 0 0 0 2 2h2a2 2 0 0 1 2 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+                Caméra
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ── STATS BAR ── */}
+        {hasSearched && (
+          <>
+            <div style={S.statsBar} id="statsBar">
+              <div style={S.statItem}>
+                <span style={S.statNum}>{results.length}</span>
+                <span>résultats</span>
+              </div>
+              <div style={S.statItem}>
+                <span style={S.statNum}>{Object.keys(allGrouped).length}</span>
+                <span>fournisseurs</span>
+              </div>
+              {inStockCount > 0 && (
+                <div style={S.statItem}>
+                  <span style={{ ...S.statNum, color: "#22c55e" }}>{inStockCount}</span>
+                  <span>en stock</span>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <button style={S.supBtn(!activeSupplier)} onClick={() => { setActiveSupplier(""); setShowMobileFilter(false) }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#6b7280", flexShrink: 0 }} />
-                    Tous
-                    <span style={{ marginLeft: "auto", fontSize: 11, fontFamily: "'DM Mono', monospace", background: T.bg4, padding: "2px 7px", borderRadius: 100 }}>{results.length}</span>
-                  </button>
-                  {Object.entries(allGrouped).map(([sup, items]) => {
-                    const key = normalize(sup)
-                    const color = SUPPLIER_COLORS[key] || SUPPLIER_COLORS.default
-                    const isActive = activeSupplier === key
-                    return (
-                      <button key={sup} style={S.supBtn(isActive)} onClick={() => { setActiveSupplier(isActive ? "" : key); setShowMobileFilter(false) }}>
-                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                        {sup}
-                        <span style={{ marginLeft: "auto", fontSize: 11, fontFamily: "'DM Mono', monospace", background: T.bg4, padding: "2px 7px", borderRadius: 100 }}>{items.length}</span>
-                      </button>
-                    )
-                  })}
-                </div>
+              )}
+              <div style={{ marginLeft: "auto", padding: "0 0 0 20px", display: "flex", alignItems: "center", gap: 10 }}>
+                <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={S.select} id="desktopSort">
+                  <option value="pertinence">Pertinence</option>
+                  <option value="stock">En stock d'abord</option>
+                  <option value="az">A → Z</option>
+                </select>
+                <button onClick={() => setCurrentView("grid")} style={{ ...S.btn(currentView === "grid"), width: 34, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="0" y="0" width="6" height="6" rx="1"/><rect x="10" y="0" width="6" height="6" rx="1"/><rect x="0" y="10" width="6" height="6" rx="1"/><rect x="10" y="10" width="6" height="6" rx="1"/></svg>
+                </button>
+                <button onClick={() => setCurrentView("list")} style={{ ...S.btn(currentView === "list"), width: 34, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="0" y="1" width="16" height="2" rx="1"/><rect x="0" y="7" width="16" height="2" rx="1"/><rect x="0" y="13" width="16" height="2" rx="1"/></svg>
+                </button>
               </div>
             </div>
-          )}
+
+            {/* Mobile filter drawer */}
+            {showMobileFilter && (
+              <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.7)" }} onClick={() => setShowMobileFilter(false)}>
+                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: T.bg2, borderRadius: "16px 16px 0 0", padding: "20px 16px 32px" }} onClick={e => e.stopPropagation()}>
+                  <p style={S.sidebarTitle}>Fournisseurs</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <button style={S.supBtn(!activeSupplier)} onClick={() => { setActiveSupplier(""); setShowMobileFilter(false) }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#6b7280", flexShrink: 0 }} />
+                      Tous
+                      <span style={{ marginLeft: "auto", fontSize: 11, fontFamily: "'DM Mono', monospace", background: T.bg4, padding: "2px 7px", borderRadius: 100 }}>{results.length}</span>
+                    </button>
+                    {Object.entries(allGrouped).map(([sup, items]) => {
+                      const key = normalize(sup)
+                      const color = SUPPLIER_COLORS[key] || SUPPLIER_COLORS.default
+                      return (
+                        <button key={sup} style={S.supBtn(activeSupplier === key)} onClick={() => { setActiveSupplier(activeSupplier === key ? "" : key); setShowMobileFilter(false) }}>
+                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                          {sup}
+                          <span style={{ marginLeft: "auto", fontSize: 11, fontFamily: "'DM Mono', monospace", background: T.bg4, padding: "2px 7px", borderRadius: 100 }}>{items.length}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
 
         {/* ── MAIN LAYOUT ── */}
         {hasSearched && (
           <div style={S.layout} id="mainLayout">
-
             {/* Sidebar */}
             <aside style={S.sidebar}>
               <div style={{ padding: "0 16px" }}>
@@ -568,11 +761,6 @@ export default function Home() {
             {/* Content */}
             <main style={S.content} id="contentArea">
 
-              {loading && (
-                <div style={{ display: "flex", justifyContent: "center", padding: 60 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: "50%", border: "3px solid #1e2330", borderTopColor: "#f97316", animation: "spin .7s linear infinite" }} />
-                </div>
-              )}
 
               {!loading && results.length === 0 && hasSearched && (
                 <div style={{ textAlign: "center", padding: "80px 40px" }}>
@@ -588,15 +776,12 @@ export default function Home() {
                 const logo = getLogoForSupplier(supplier)
                 return (
                   <div key={supplier} style={{ marginBottom: 40 }}>
-                    {/* Supplier header */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, paddingBottom: 14, borderBottom: `1px solid ${T.border}` }}>
+                    <div className="supplier-header" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, paddingBottom: 14, borderBottom: `1px solid ${T.border}` }}>
                       <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, display: "inline-block", flexShrink: 0 }} />
                       {logo && <img src={logo} alt={supplier} style={{ height: 22, width: "auto", objectFit: "contain" }} />}
                       <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 15, fontWeight: 700 }}>{supplier}</span>
                       <span style={{ fontSize: 12, fontFamily: "'DM Mono', monospace", background: T.bg4, color: T.text2, padding: "3px 10px", borderRadius: 100 }}>{items.length} résultats</span>
                     </div>
-
-                    {/* Grid or List */}
                     {currentView === "grid" ? (
                       <div className="results-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
                         {items.map((item, i) => <PartCard key={i} item={item} />)}
@@ -606,12 +791,10 @@ export default function Home() {
                         {items.map((item, i) => <ListItem key={i} item={item} />)}
                       </div>
                     )}
-
-                    {/* Voir plus — sous les résultats */}
                     {hasMoreSuppliers[key] && (
                       <div style={{ display: "flex", justifyContent: "center", marginTop: 20 }}>
                         <button onClick={() => loadMore(key)}
-                          style={{ padding: "9px 28px", borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, fontSize: 13, color: T.text2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all .2s" }}>
+                          style={{ padding: "9px 28px", borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, fontSize: 13, color: T.text2, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
                           {loadingSuppliers[key] ? "Chargement…" : "+ Voir plus"}
                         </button>
                       </div>
@@ -620,18 +803,11 @@ export default function Home() {
                 )
               })}
 
-              {/* ── GOOGLE FALLBACK ── */}
+              {/* Google fallback */}
               {!loading && results.length === 0 && (googleLoading || googleResults.length > 0) && (
                 <div style={{ marginBottom: 40 }}>
-                  {/* Header Google */}
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, paddingBottom: 14, borderBottom: `1px solid ${T.border}` }}>
                     <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ea4335", display: "inline-block", flexShrink: 0 }} />
-                    <svg width="16" height="16" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                    </svg>
                     <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 15, fontWeight: 700 }}>Google</span>
                     {googleLoading
                       ? <span style={{ fontSize: 12, color: T.text2 }}>Recherche en cours…</span>
@@ -639,34 +815,14 @@ export default function Home() {
                     }
                     <span style={{ fontSize: 11, color: T.text3, marginLeft: 4 }}>— Aucun résultat chez nos fournisseurs</span>
                   </div>
-
                   {googleLoading && (
                     <div style={{ display: "flex", justifyContent: "center", padding: 40 }}>
                       <div style={{ width: 28, height: 28, borderRadius: "50%", border: "3px solid #1e2330", borderTopColor: "#ea4335", animation: "spin .7s linear infinite" }} />
                     </div>
                   )}
-
-                  {/* Résultats Google en liste */}
                   {!googleLoading && googleResults.length > 0 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                      {googleResults.map((item, i) => (
-                        <div key={i} style={{ ...S.listItem, cursor: "default" }}>
-                          <div style={{ width: 56, height: 56, flexShrink: 0, background: T.bg3, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                            {item.image
-                              ? <img src={item.image} alt={item.title} style={{ maxWidth: 48, maxHeight: 48, objectFit: "contain" }} onError={e => { (e.target as HTMLImageElement).style.display = "none" }} />
-                              : <svg width="20" height="20" viewBox="0 0 24 24" opacity="0.3"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                            }
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ fontSize: 13, fontWeight: 500, marginBottom: 3, color: T.text }}>{item.title}</p>
-                            <p style={{ fontSize: 11, color: T.text3, marginBottom: 0 }}>{item.source}</p>
-                          </div>
-                          <a href={item.link} target="_blank" rel="noopener noreferrer"
-                            style={{ padding: "7px 14px", borderRadius: 8, background: T.bg3, border: `1px solid ${T.border}`, fontSize: 12, color: T.text2, textDecoration: "none", whiteSpace: "nowrap" as const, flexShrink: 0 }}>
-                            Voir →
-                          </a>
-                        </div>
-                      ))}
+                      {googleResults.map((item, i) => <ListItem key={i} item={item} />)}
                     </div>
                   )}
                 </div>
@@ -675,80 +831,13 @@ export default function Home() {
           </div>
         )}
 
-        {/* ── ZOOM MODAL ── */}
+        {/* ── ZOOM IMAGE ── */}
         {zoomImage && (
-          <div onClick={() => setZoomImage(null)} style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <img src={zoomImage} alt="Zoom" style={{ maxWidth: "90vw", maxHeight: "85vh", borderRadius: 12, objectFit: "contain" }} onClick={e => e.stopPropagation()} />
-            <button onClick={() => setZoomImage(null)} style={{ position: "absolute", top: 20, right: 20, width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.1)", color: "#fff", border: "none", fontSize: 20, cursor: "pointer" }}>✕</button>
+          <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center" }}
+            onClick={() => setZoomImage(null)}>
+            <img src={zoomImage} alt="zoom" style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: 12, objectFit: "contain" }} />
           </div>
         )}
-
-        <style>{`
-          @keyframes spin { to { transform: rotate(360deg); } }
-          * { box-sizing: border-box; margin: 0; padding: 0; }
-          ::-webkit-scrollbar { width: 6px; height: 6px; }
-          ::-webkit-scrollbar-track { background: transparent; }
-          ::-webkit-scrollbar-thumb { background: ${T.bg4}; border-radius: 3px; }
-          .part-card:hover { border-color: ${T.border2} !important; box-shadow: 0 8px 32px rgba(0,0,0,0.3); transform: translateY(-2px); }
-          .list-item:hover { border-color: ${T.border2} !important; }
-          .card-link:hover { background: #f97316 !important; border-color: #f97316 !important; color: #fff !important; }
-          .load-more-btn:hover { border-color: rgba(249,115,22,0.3) !important; color: #f97316 !important; }
-
-          /* ── MOBILE RESPONSIVE ── */
-          @media (max-width: 768px) {
-            aside { display: none !important; }
-            #mobileToolbar { display: flex !important; }
-            #desktopSort { display: none !important; }
-            #desktopViewToggle { display: none !important; }
-            #mobileFilterBtn { display: flex !important; }
-
-            /* Layout pleine largeur */
-            #mainLayout { padding: 0 12px !important; }
-
-            /* Hero compact */
-            #heroSection { padding: 16px 12px 12px !important; }
-
-            /* Logo plus petit sur mobile */
-            #heroSection svg { height: 140px !important; }
-
-            /* Search row full width */
-            #searchRow { border-radius: 10px !important; padding: 4px !important; }
-            #searchRow input { font-size: 14px !important; }
-            #searchRow button { padding: 8px 12px !important; font-size: 13px !important; border-radius: 8px !important; }
-
-            /* Stats bar scrollable */
-            #statsBar { padding: 0 12px !important; }
-            #statsBar > div { padding: 10px 12px !important; }
-
-            /* Grille 2 colonnes sur mobile */
-            .results-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
-
-            /* Cards plus compactes */
-            .card-img { height: 120px !important; }
-            .card-body { padding: 10px !important; }
-
-            /* Content padding réduit */
-            #contentArea { padding: 12px !important; }
-
-            /* Supplier header wrap */
-            .supplier-header { flex-wrap: wrap !important; gap: 8px !important; }
-
-            /* Topbar compact */
-            #topbar { padding: 0 12px !important; gap: 10px !important; }
-
-            /* History pills */
-            #historyRow { gap: 6px !important; }
-            #historyRow button { font-size: 11px !important; padding: 3px 10px !important; }
-
-            /* Cacher icone loupe sur mobile pour gagner de la place */
-            #searchIcon { display: none !important; }
-          }
-
-          @media (max-width: 400px) {
-            .results-grid { grid-template-columns: 1fr !important; }
-            #heroSection svg { height: 110px !important; }
-          }
-        `}</style>
       </div>
     </>
   )
