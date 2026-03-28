@@ -18,16 +18,28 @@
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-512.png",
+      "src": "/logos/lpf-logo.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/logos/lpf-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logos/lpf-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/logos/lpf-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "screenshots": [
@@ -35,18 +47,24 @@
       "src": "/logos/lpf-logo.png",
       "sizes": "1000x707",
       "type": "image/png",
+      "form_factor": "narrow",
+      "label": "LiftParts Finder"
+    },
+    {
+      "src": "/logos/lpf-logo.png",
+      "sizes": "1000x707",
+      "type": "image/png",
       "form_factor": "wide",
-      "label": "LiftParts Finder — Recherche de pièces ascenseur"
+      "label": "LiftParts Finder"
     }
   ],
   "categories": ["productivity", "utilities"],
   "shortcuts": [
     {
-      "name": "Rechercher",
+      "name": "Rechercher une pièce",
       "short_name": "Recherche",
-      "description": "Lancer une recherche de pièce",
       "url": "/",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/logos/lpf-logo.png", "sizes": "192x192" }]
     }
   ]
 }
