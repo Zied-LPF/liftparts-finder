@@ -461,16 +461,16 @@ export default function Home() {
             #searchRow { border-radius: 10px !important; padding: 4px !important; }
             #searchRow input { font-size: 14px !important; }
             #searchRow button { padding: 8px 12px !important; font-size: 13px !important; border-radius: 8px !important; }
-            #statsBar { padding: 0 12px !important; }
-            #statsBar > div { padding: 10px 12px !important; }
+            #statsBar { padding: 0 8px !important; }
+            #statsBar > div { padding: 10px 10px !important; }
+            #statsBarDesktopControls { display: none !important; }
+            #mobileToolbar { display: flex !important; }
             .results-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
             .card-img { height: 120px !important; }
             .card-body { padding: 10px !important; }
             #contentArea { padding: 12px !important; }
             .supplier-header { flex-wrap: wrap !important; gap: 8px !important; }
             #topbar { padding: 0 12px !important; gap: 10px !important; }
-            #historyRow { gap: 6px !important; }
-            #historyRow button { font-size: 11px !important; padding: 3px 10px !important; }
             #searchIcon { display: none !important; }
             #imageSearchBar { padding: 4px !important; }
             #imageSearchBar button { padding: 8px 10px !important; font-size: 12px !important; }
@@ -692,7 +692,7 @@ export default function Home() {
                   <span>en stock</span>
                 </div>
               )}
-              <div style={{ marginLeft: "auto", padding: "0 0 0 20px", display: "flex", alignItems: "center", gap: 10 }}>
+              <div id="statsBarDesktopControls" style={{ marginLeft: "auto", padding: "0 0 0 20px", display: "flex", alignItems: "center", gap: 10 }}>
                 <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={S.select} id="desktopSort">
                   <option value="pertinence">Pertinence</option>
                   <option value="stock">En stock d'abord</option>
@@ -707,7 +707,39 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Mobile filter drawer */}
+            {/* ── MOBILE TOOLBAR ── */}
+            <div id="mobileToolbar" style={{
+              display: "none", padding: "10px 12px", gap: 8,
+              borderBottom: `1px solid ${T.border}`, background: T.bg2, alignItems: "center"
+            }}>
+              <button
+                onClick={() => setShowMobileFilter(true)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6, padding: "8px 14px",
+                  borderRadius: 10, background: activeSupplier ? "rgba(249,115,22,0.1)" : T.bg3,
+                  border: `1px solid ${activeSupplier ? "rgba(249,115,22,0.3)" : T.border}`,
+                  fontSize: 13, color: activeSupplier ? "#f97316" : T.text2,
+                  cursor: "pointer", fontFamily: "'DM Sans', sans-serif", flexShrink: 0
+                }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+                </svg>
+                Filtres
+                {activeSupplier && <span style={{ background: "#f97316", color: "#fff", borderRadius: 100, padding: "1px 7px", fontSize: 11 }}>1</span>}
+              </button>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+                style={{ ...S.select, flex: 1 }}>
+                <option value="pertinence">Pertinence</option>
+                <option value="stock">En stock d'abord</option>
+                <option value="az">A → Z</option>
+              </select>
+              <button onClick={() => setCurrentView("grid")} style={{ ...S.btn(currentView === "grid"), width: 36, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="0" y="0" width="6" height="6" rx="1"/><rect x="10" y="0" width="6" height="6" rx="1"/><rect x="0" y="10" width="6" height="6" rx="1"/><rect x="10" y="10" width="6" height="6" rx="1"/></svg>
+              </button>
+              <button onClick={() => setCurrentView("list")} style={{ ...S.btn(currentView === "list"), width: 36, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="0" y="1" width="16" height="2" rx="1"/><rect x="0" y="7" width="16" height="2" rx="1"/><rect x="0" y="13" width="16" height="2" rx="1"/></svg>
+              </button>
+            </div>
             {showMobileFilter && (
               <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.7)" }} onClick={() => setShowMobileFilter(false)}>
                 <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: T.bg2, borderRadius: "16px 16px 0 0", padding: "20px 16px 32px" }} onClick={e => e.stopPropagation()}>
